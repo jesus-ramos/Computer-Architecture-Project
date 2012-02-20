@@ -1,0 +1,92 @@
+\documentclass[letterpaper,12pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{titling}
+
+\setlength{\droptitle}{-0.75in}
+
+\title{Fault Tolerance in Block-Level Caching}
+\author{
+  Jesus Ramos \\ \texttt{jramo028@fiu.edu} \and
+  Douglas Otstott \\ \texttt{dotst001@fiu.edu}
+}
+\date{}
+
+\pagestyle{empty}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+
+\section*{Problem Statement}
+
+Dependability and reliability are two important factors when dealing
+with cloud computing. Systems should be robust and be able to recover
+from errors and failure effectively and quickly. \\ \\*
+%
+Fault tolerance is still a major issue in cloud based systems that
+employ caching. Currently in the event of an error or power failure
+all data that was pending to be written back is lost along with
+currently cached data. In some cases minor data loss is acceptable,
+but in most cases even minor loss of data can result in larger
+problems and error recovery can become very complex depending on the
+type and quantity of data lost.
+
+% end section Problem Statement
+
+\section*{Problem Background}
+
+Many cloud based systems employ network storage due to the physical
+limitations of local storage devices. While this solves the storage
+size problem it also increases the response latency and might have
+bandwidth issues due to the sheer amount of requests going to the
+network storage devices. \\ \\*
+%
+Caches are employed by many systems as a means to bring in the most
+frequently used data to more local storage devices to reduce latency
+and alleviate pressure on the main storage system.
+
+% end section Problem Background
+
+\section*{Proposed Solution}
+
+Our proposed solution is to add a layer of fault tolerance to DM-Cache
+to allow for more graceful recovery of the errors mentioned
+previously. \\ \\*
+%
+The main goal of this project is to allow recovery of a cache that was
+lost due to a power failure or possible system crash. This way, once
+the machine that was running the cache is brought back online, it is
+able to recover the information that it was caching. This solves the
+issue of lost write back data and also allows the machine to continue
+from where it left off by having a warm cache. This further alleviates
+pressure on the main storage system by allowing graceful recovery of
+data that was already present in the cache, meaning that applications
+can start running much faster than in situations where there was no
+fault tolerance.
+
+% end section Proposed Solution
+
+\section*{Project Timeline}
+
+The first phase of this project is to do some research on methods for
+persisting cache meta-data effectively so that recovery can be done
+quickly and efficiently when the cache is being recreated. \\ \\*
+%
+Once we have decided on the method for persisting the data we will
+actually implement this into DM-Cache and add an option when creating
+the cache to allow for recovery of the previous cache in case of
+system failure. \\ \\*
+%
+The last phase will involve testing and evaluation of just how robust
+the system will be in the even of a system failure such as power or
+system crash.
+
+% end section Project Timeline
+
+\section*{Project Evaluation}
+
+% end section Project Evaluation
+
+\end{document}
