@@ -5,3 +5,7 @@
 *.ps
 *.dvi
 *.bbl
+*.nav
+*.out
+*.snm
+*.toc
