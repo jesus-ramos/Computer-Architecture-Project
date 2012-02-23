@@ -2,6 +2,7 @@
 
 \usepackage[margin=1in]{geometry}
 \usepackage{titling}
+\usepackage{graphicx}
 
 \setlength{\droptitle}{-0.75in}
 
@@ -21,9 +22,17 @@
 
 \section*{Problem Statement}
 
+Many companies are switching to warehouse scale computing to deal with
+increasing computing demands due to the cost and efficiency of
+warehouse architecture. Rather than trying to prevent failure, most
+warehouse scale computing solutions accept failure and attempt to
+integrate recovery as seamlessly as possible\cite{Placeholder}.
+\\ \\*
+%
 Dependability and reliability are two important factors when dealing
-with cloud computing. Systems should be robust and be able to recover
-from errors and failure effectively and quickly. \\ \\*
+with cloud and warehouse scale computing. Systems should be robust and
+be able to recover from errors and failure effectively and quickly.
+\\ \\*
 %
 Fault tolerance is still a major issue in cloud based systems that
 employ caching. Currently in the event of an error or power failure
@@ -37,34 +46,46 @@ type and quantity of data lost.
 
 \section*{Problem Background}
 
-Many cloud based systems employ network storage due to the physical
-limitations of local storage devices. While this solves the storage
-size problem it also increases the response latency and might have
-bandwidth issues due to the sheer amount of requests going to the
-network storage devices. \\ \\*
+\begin{center}
+  \includegraphics{../Images/NewerImage.png}
+\end{center}
+\noindent
+Many large scale cloud based systems employ network storage due to the
+physical limitations of local storage devices. Basically, each host
+machine in the cloud is connected to a small number of machines which
+are responsible for all persistent data management across the system.
+These machines create what is known as a Storage Area Network (SAN).
+SAN's are a common solution used by cloud service providers due to the
+simplification of virtual machine migration and increased data
+reliability. While this solves the storage size problem it also
+increases the response latency and creates a bandwidth issue due to
+the sheer volume of requests constantly sent to the storage devices.
+\\ \\*
 %
-Caches are employed by many systems as a means to bring in the most
-frequently used data to more local storage devices to reduce latency
-and alleviate pressure on the main storage system.
+Local caches are employed by many systems as a means to bring in the
+most frequently used data to more local storage devices to reduce
+latency and alleviate pressure on the main storage system. DM-Cache is
+an open-source block-level caching solution developed as a Linux
+kernel module. DM-Cache allows host machines to store the most
+recently used blocks in a designated storage device. Preliminary
+testing on DM-Cache indicates a significant improvement in systems
+where numerous hosts and virtual machines create a bottleneck in terms
+of network storage bandwidth. However, local caching introduces a new
+problem in terms of fault tolerance as locally modified blocks are lost
+in the event of system failure.
 
 % end section Problem Background
 
 \section*{Proposed Solution}
 
-Our proposed solution is to add a layer of fault tolerance to DM-Cache
-to allow for more graceful recovery of the errors mentioned
-previously. \\ \\*
+Our proposed solution is to add functionality to DM-Cache to allow
+persisting of the cache meta data to the disk. This meta data can then
+be used in case of power or system failure and will minimize the data
+lost in the event of a system failure.
+\\ \\*
 %
-The main goal of this project is to allow recovery of a cache that was
-lost due to a power failure or possible system crash. This way, once
-the machine that was running the cache is brought back online, it is
-able to recover the information that it was caching. This solves the
-issue of lost write back data and also allows the machine to continue
-from where it left off by having a warm cache. This further alleviates
-pressure on the main storage system by allowing graceful recovery of
-data that was already present in the cache, meaning that applications
-can start running much faster than in situations where there was no
-fault tolerance.
+This solution can also provide for quicker recovery time in the event
+of an error as we can use the meta data that was persisted to
 
 % end section Proposed Solution
 
@@ -72,12 +93,14 @@ fault tolerance.
 
 The first phase of this project is to do some research on methods for
 persisting cache meta-data effectively so that recovery can be done
-quickly and efficiently when the cache is being recreated. \\ \\*
+quickly and efficiently when the cache is being recreated.
+\\ \\*
 %
 Once we have decided on the method for persisting the data we will
 actually implement this into DM-Cache and add an option when creating
 the cache to allow for recovery of the previous cache in case of
-system failure. \\ \\*
+system failure.
+\\ \\*
 %
 The last phase will involve testing and evaluation of just how robust
 the system will be in the even of a system failure such as power or
@@ -87,7 +110,7 @@ system crash.
 
 \section*{Project Evaluation}
 
-Test citation \cite{Test}
+Test citation and placeholder for project evaluation \cite{Test}
 
 % end section Project Evaluation
 
