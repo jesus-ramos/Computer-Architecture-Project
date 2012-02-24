@@ -13,12 +13,9 @@
 }
 \date{}
 
-\pagestyle{empty}
-
 \begin{document}
 
 \maketitle
-\thispagestyle{empty}
 
 \section*{Problem Statement}
 
@@ -28,12 +25,10 @@ warehouse architecture. Rather than trying to prevent failure, most
 warehouse scale computing solutions accept failure and attempt to
 integrate recovery as seamlessly as possible\cite{Placeholder}.
 \\ \\*
-%
 Dependability and reliability are two important factors when dealing
 with cloud and warehouse scale computing. Systems should be robust and
 be able to recover from errors and failure effectively and quickly.
 \\ \\*
-%
 Fault tolerance is still a major issue in cloud based systems that
 employ caching. Currently in the event of an error or power failure
 all data that was pending to be written back is lost along with
@@ -61,7 +56,6 @@ reliability. While this solves the storage size problem it also
 increases the response latency and creates a bandwidth issue due to
 the sheer volume of requests constantly sent to the storage devices.
 \\ \\*
-%
 Local caches are employed by many systems as a means to bring in the
 most frequently used data to more local storage devices to reduce
 latency and alleviate pressure on the main storage system. DM-Cache is
@@ -78,43 +72,25 @@ in the event of system failure.
 
 \section*{Proposed Solution}
 
-Our proposed solution is to add functionality to DM-Cache to allow
-persisting of the cache meta data to the disk. This meta data can then
-be used in case of power or system failure and will minimize the data
-lost in the event of a system failure.
-\\ \\*
-%
-This solution can also provide for quicker recovery time in the event
-of an error as we can use the meta data that was persisted to
+Our proposed solution is to add metadata persistence to DM-Cache. With
+metadata persistence we can recover blocks that would have otherwise
+been lost to the system failure.
+% add some stuff about how the metadata lets us make DM-Cache awesome
+% also radix tree and hash table magic
 
 % end section Proposed Solution
 
 \section*{Project Timeline}
 
-The first phase of this project is to do some research on methods for
-persisting cache meta-data effectively so that recovery can be done
-quickly and efficiently when the cache is being recreated.
-\\ \\*
-%
-Once we have decided on the method for persisting the data we will
-actually implement this into DM-Cache and add an option when creating
-the cache to allow for recovery of the previous cache in case of
-system failure.
-\\ \\*
-%
-The last phase will involve testing and evaluation of just how robust
-the system will be in the even of a system failure such as power or
-system crash.
-
 % end section Project Timeline
 
 \section*{Project Evaluation}
 
-Test citation and placeholder for project evaluation \cite{Test}
+In this project we will evaluate the overhead introduced in DM-Cache
+by persisting metadata to the disk.
+% more stuff about how this will help things do stuff faster
 
 % end section Project Evaluation
-
-% Bibtex section
 
 \bibliography{proposal}
 \bibliographystyle{plain}
