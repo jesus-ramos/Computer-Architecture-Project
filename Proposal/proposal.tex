@@ -72,9 +72,23 @@ in the event of system failure.
 
 \section*{Proposed Solution}
 
-Our proposed solution is to add metadata persistence to DM-Cache. With
-metadata persistence we can recover blocks that would have otherwise
-been lost to the system failure.
+The solution to the inherent fault intolerance of local caching is to move the
+metadata from non-persisent memory to the persisent cahce device.  In this way, we
+can reconstruct the state of the cache in the event of power loss or the host crashes 
+to within some margin of error.  To minimize the performance overhead this policy would 
+nessesitate, we also propose that recently used metadata should be cached in memory and 
+changes to metadata should be written back to disk asynchronously.  This of course would
+prevent very recent changes to metadata from being recovered if they had yet not been
+commmited to disk.  However, we believe this is a fair trade off in terms of 
+Fault Tolerance versus Performance.  
+
+DM-Cache currently has two variantations in implmentation. One uses a hash table 
+for a metadata structure and the other uses a radix tree. Currently, the plan is to
+attempt implementation on both concurrently and focus on the either solution
+in the interest of time. The radix tree implementation still has some bugs that still need to be 
+addressed. Depending on the complexity of solving these issues, we may focus on the hash table
+implementation in order to accomadate the projects time constrants. 
+
 % add some stuff about how the metadata lets us make DM-Cache awesome
 % also radix tree and hash table magic
 
@@ -82,12 +96,26 @@ been lost to the system failure.
 
 \section*{Project Timeline}
 
+Feburary 26th - Begin Preliminary Testing (Radix Tree)
+March 1st - Begin solution implementation (Radix/Hash)
+April 5th - Debug solution (Hash Table)
+April 10th - Begin Evaluation
+April 15th - Conclude Evaulation
+April 20th - Write a paper and present
+
 % end section Project Timeline
 
 \section*{Project Evaluation}
 
 In this project we will evaluate the overhead introduced in DM-Cache
-by persisting metadata to the disk.
+by persisting metadata to the disk.  The first round of testing will involve 
+running I/O benchmarks with and without metadata persistance and compare the 
+results to determine the performance decrease created by the extra overhead. 
+The second test will evaluate the actual effectiveness of the data recovery mechanism.
+The plan is to execute a standardize workload (such a kernel compilation) using a cache,
+and we shall unplug the machine as the execution concludes.  We shall then measure the degree 
+which data can be recovered in the metadata persistant cache vs the original dm-cache.
+
 % more stuff about how this will help things do stuff faster
 
 % end section Project Evaluation
