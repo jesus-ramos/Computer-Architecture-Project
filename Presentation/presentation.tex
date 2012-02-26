@@ -3,8 +3,6 @@
 \usetheme{CambridgeUS}
 \usecolortheme{beaver}
 
-\setlength{\parskip}{\baselineskip}
-
 \title{Fault Tolerance in Block-Level Caching}
 \author{
   Jesus Ramos \and
@@ -24,13 +22,17 @@
 \begin{frame}
   \frametitle{Problem Statement}
 
-Fault tolerance in warehouse scale systems is an important issue
--Expect faults to happen
--Deal with faults online
+  Fault tolerance in warehouse scale systems is an important issue
+  \begin{itemize}
+    \item Expect faults to happen
+    \item Deal with faults online
+  \end{itemize}
 
-Systems need to be: 
--dependable and reliable
--able to handle failure quickly and effectively
+  Systems need to be
+  \begin{itemize}
+    \item Dependable and reliable
+    \item Able to handle failure quickly and effectively
+  \end{itemize}
 
 \end{frame}
 
@@ -40,46 +42,60 @@ Systems need to be:
 
 \begin{frame}
   \frametitle{Problem Background}
-%To do - add bullets
-Warehouse Scale Computing Architecture utilizes Storage Area Networks for persistant storage
--Increase reliablity
--Easy to Mirgrate VMs
--Storage Bandwidth = Performance Bottleneck %can we make this red to indicate it is a drawback?
 
-Storage Area Networks use Cache
--Leverages Network Storage
--Large Performance Increase
--Reduced fault tolernace %also make this red if possible
+  Warehouse Scale Computing Architectures utilize Storage Area
+  Networks for persistent storage
+  \begin{itemize}
+    \item Increase reliability
+    \item Easy to migrate VMs
+    \item Storage Bandwidth  = \textcolor{red}{Performance Bottleneck}
+  \end{itemize}
+
+  Storage Area Networks use caches
+  \begin{itemize}
+    \item Leverages network storage
+    \item Large performance increase
+    \item \textcolor{red}{Reduced fault tolerance}
+  \end{itemize}
 
 \end{frame}
 
 \begin{frame}
   \frametitle{Problem Background}
   \begin{center}
-    \includegraphics[scale=0.85]{../Images/NewerImage.png}
+    \includegraphics[scale=0.75]{../Images/NewerImage.png}
   \end{center}
 
-Cache device on host machine
--Virtual mapping between virtual disk and central storage
+  Cache device on host machine
+  \begin{itemize}
+    \item Virtual mapping between virtual disk and central storage
+  \end{itemize}
 
 \end{frame}
 
 \begin{frame}
   \frametitle{DM-Cache}
 
-DM-Cache
--open source block level (Linux Kernel module) caching solution
--allows host machines to store recently used blocks
--reduces the number of requests to central storage systems.
+  DM-Cache
+  \begin{itemize}
+    \item Open source block level (Linux Kernel module) caching
+    solution
+    \item Allows host machines to store recently used blocks
+    \item Reduces the number of requests to central storage systems.
+  \end{itemize}
 
-Increases performance
--access time must less than cental storage
--greatly reduces contension for network storage
+  Increases performance
+  \begin{itemize}
+    \item Access time is much faster than central storage
+    \item Greatly reduces contention for network storage
+  \end{itemize}
 
-Decreases Fault Tolerance
--Metadata is non persistnt
--Writes are buffered through the cache
--local modifications temporarily vulnerable
+  Decreases Fault Tolerance
+  \begin{itemize}
+    \item Metadata is non persistent
+    \item Writes are buffered through the cache
+    \item Local modifications are temporarily vulnerable
+  \end{itemize}
 
 \end{frame}
 
@@ -94,12 +110,20 @@ Decreases Fault Tolerance
 \begin{frame}
   \frametitle{Persist the Metadata}
 
-Solution:
--move the non-persistent metadata from to the persistent cache device
-   -Facilitates the reconstruction of the cache
--metadata to be cached in memory
-   -written back to disk via background process
-	-trade offs of write back methods
+  Solution
+  \begin{itemize}
+    \item Move the non-persistent metadata to the persistent cache
+    device
+    \begin{itemize}
+      \item Facilitates the reconstruction of the cache
+    \end{itemize}
+    \item Cache the metadata in memory
+    \begin{itemize}
+      \item Write the data back asynchronously at certain intervals or
+      every time it is updated
+      \item Trade offs of write back methods
+    \end{itemize}
+  \end{itemize}
 
 \end{frame}
 
@@ -132,16 +156,20 @@ Solution:
   \begin{itemize}
     \item The run-time overhead of two persistence techniques for
     metadata
-	-updating the metadata in the background while keeping it cached on the disk
-	-forcing a write back every time the metadata changes
+    \begin{itemize}
+      \item Updating the metadata in the background while keeping it
+      cached on the disk
+      \item Forcing a write back every time the metadata changes
+    \end{itemize}
     \item The amount of time it takes to restore a cache to its last
     persistence point before the system failure
-
-    \item The amount of data that can be recovered using both techniques
-
-    \item The trade-offs between both techniques 
-		-data can be recovered
-		-run time overhead
+    \item The amount of data that can be recovered using both
+    techniques
+    \item The trade-offs between both techniques
+    \begin{itemize}
+      \item Data that can be recovered
+      \item Run time overhead
+    \end{itemize}
   \end{itemize}
 
 \end{frame}
