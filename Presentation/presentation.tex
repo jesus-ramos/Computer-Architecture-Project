@@ -24,18 +24,13 @@
 \begin{frame}
   \frametitle{Problem Statement}
 
-  Fault tolerance in cloud systems is an important issue. Most systems
-  rather than attempt to prevent failure instead expect failure and
-  attempt to integrate recovery as seamlessly as possible into the
-  system.
+Fault tolerance in warehouse scale systems is an important issue
+-Expect faults to happen
+-Deal with faults online
 
-  Systems need to be both dependable and reliable and able to handle
-  failure quickly and effectively.
-
-  In cloud systems that employ caching, fault tolerance is a major
-  issue. Currently in the event of a power or system failure all data
-  that was pending to be flushed back to central storage is lost along
-  with the currently cached data.
+Systems need to be: 
+-dependable and reliable
+-able to handle failure quickly and effectively
 
 \end{frame}
 
@@ -45,47 +40,46 @@
 
 \begin{frame}
   \frametitle{Problem Background}
+%To do - add bullets
+Warehouse Scale Computing Architecture utilizes Storage Area Networks for persistant storage
+-Increase reliablity
+-Easy to Mirgrate VMs
+-Storage Bandwidth = Performance Bottleneck %can we make this red to indicate it is a drawback?
 
-  Due to physical limitations on local storage, many large scale cloud
-  based systems employ network based storage. In this scheme each host
-  machine in the cloud is connected to a small number of machines
-  which are responsible for the central storage in the system. This is
-  known as a Storage Area Network or SAN.
-
-  Although this solves the storage problem it introduces latency and
-  bandwidth problems due to the sheer volume of requests being sent to
-  the storage devices.
+Storage Area Networks use Cache
+-Leverages Network Storage
+-Large Performance Increase
+-Reduced fault tolernace %also make this red if possible
 
 \end{frame}
 
 \begin{frame}
   \frametitle{Problem Background}
-
-  To solve this new issue of storage bandwidth and latency, most
-  systems employ local caching of the most recently used data to
-  reduce the number of requests that must go to central storage.
-
   \begin{center}
     \includegraphics[scale=0.85]{../Images/NewerImage.png}
   \end{center}
+
+Cache device on host machine
+-Virtual mapping between virtual disk and central storage
 
 \end{frame}
 
 \begin{frame}
   \frametitle{DM-Cache}
 
-  DM-Cache is an open source block level caching solution that was
-  developed as a Linux kernel module. DM-Cache allows host machines to
-  store the most recently used blocks in a designated storage device
-  to reduce the number of requests to central storage systems.
+DM-Cache
+-open source block level (Linux Kernel module) caching solution
+-allows host machines to store recently used blocks
+-reduces the number of requests to central storage systems.
 
-  Testing so far has shown that DM-Cache alleviates network storage
-  pressure in systems where numerous hosts and virtual machines create
-  a bottleneck in network storage bandwidth.
+Increases performance
+-access time must less than cental storage
+-greatly reduces contension for network storage
 
-  Although network storage pressure is alleviated by DM-Cache, locally
-  modified blocks and current cache data is lost in the event of a
-  power or system failure which can result in data loss.
+Decreases Fault Tolerance
+-Metadata is non persistnt
+-Writes are buffered through the cache
+-local modifications temporarily vulnerable
 
 \end{frame}
 
@@ -100,14 +94,12 @@
 \begin{frame}
   \frametitle{Persist the Metadata}
 
-  Our solution is to move the non-persistent metadata held in memory
-  to the persistent cache device. This allows us to reconstruct the
-  cache in the event of a system failure or power loss.
-
-  The metadata itself will be cached in memory and written back to
-  disk either when updated or at specific intervals. The trade offs of
-  these methods will be evaluated for performance and fault tolerance
-  of the cache.
+Solution:
+-move the non-persistent metadata from to the persistent cache device
+   -Facilitates the reconstruction of the cache
+-metadata to be cached in memory
+   -written back to disk via background process
+	-trade offs of write back methods
 
 \end{frame}
 
@@ -139,15 +131,17 @@
   In this project we will evaluate the following:
   \begin{itemize}
     \item The run-time overhead of two persistence techniques for
-    metadata, updating the metadata in the background while keeping it
-    cached on the disk and forcing a write back every time the
-    metadata changes.
+    metadata
+	-updating the metadata in the background while keeping it cached on the disk
+	-forcing a write back every time the metadata changes
     \item The amount of time it takes to restore a cache to its last
-    persistence point before the system failure.
-    \item The amount of data that can be recovered using both
-    previously mentioned techniques.
-    \item The trade-offs between both techniques in terms of how much
-    data you can recover compared to the run time overhead.
+    persistence point before the system failure
+
+    \item The amount of data that can be recovered using both techniques
+
+    \item The trade-offs between both techniques 
+		-data can be recovered
+		-run time overhead
   \end{itemize}
 
 \end{frame}
