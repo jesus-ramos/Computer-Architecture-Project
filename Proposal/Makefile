@@ -1,12 +1,10 @@
 DOC = proposal
 
 all:
-	latex $(DOC)
+	pdflatex $(DOC)
 	bibtex $(DOC)
-	latex $(DOC)
-	latex $(DOC)
-	dvips $(DOC).dvi
-	ps2pdf $(DOC).ps
+	pdflatex $(DOC)
+	pdflatex $(DOC)
 
 clean:
 	-rm *.pdf *.aux *.log *.blg *.ps *.dvi *.bbl
