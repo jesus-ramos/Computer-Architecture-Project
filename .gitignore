@@ -9,3 +9,10 @@
 *.out
 *.snm
 *.toc
+*.cmd
+*.o
+*.order
+.tmp_versions
+*.ko
+*.mod.c
+*.symvers

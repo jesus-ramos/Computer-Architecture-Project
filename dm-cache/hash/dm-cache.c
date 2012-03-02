@@ -2451,8 +2451,6 @@ init:	/* Initialize the cache structs */
 	for (i=0; i<dmc->size; i++) {
 		bio_list_init(&dmc->cache[i].bios);
 		if(!persistence) dmc->cache[i].state = 0;
-		dmc->cache[i].state = 0;
-		atomic_set(&dmc->cache[i].status, 0);
 		dmc->cache[i].counter = 0;
 		spin_lock_init(&dmc->cache[i].lock);
 	}
