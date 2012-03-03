@@ -16,3 +16,4 @@
 *.ko
 *.mod.c
 *.symvers
+TAGS
