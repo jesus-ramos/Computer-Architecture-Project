@@ -54,7 +54,7 @@ are responsible for all persistent data management across the system.
 These machines create what is known as a Storage Area Network (SAN).
 SAN's are a common solution used by cloud service providers due to the
 simplification of virtual machine migration and increased data
-reliability\cite{Datacenter}. While this solves the storage size
+reliability \cite{Datacenter}. While this solves the storage size
 problem it also increases the response latency and creates a bandwidth
 issue due to the sheer volume of requests constantly sent to the
 storage devices.
@@ -132,27 +132,41 @@ persistent cache compared to the original implementation of DM-Cache.
 
 Error recovery in storage systems that employ caching techniques is
 not a new idea and has been shown to work quickly and reliably in DRAM
-based systems\cite{RAMCloud}.
+based systems \cite{RAMCloud}.
 
 Recovery of persisted data in the event of a system failure using a
 transactional approach can ensure correctness in persisted data as
-well as provide mechanisms for error recovery\cite{NVHeaps}.
+well as provide mechanisms for error recovery \cite{NVHeaps}.
 
 Storage class memory devices have been used to create persistent
 memory models allowing for in memory structures to be persisted
-quickly and reliably\cite{Mnemosyne}. This idea can be extended to
+quickly and reliably \cite{Mnemosyne}. This idea can be extended to
 solid state drives whose performance is very close to that of storage
 class memory devices.
 
 Transactional operations for fault tolerant systems has been suggested
 before and was shown to be tunable to provide as much performance or
-overhead that the programmer wanted\cite{FaulTM}.
+overhead that the programmer wanted \cite{FaulTM}.
 
 Different communication architectures exist for handling network
 bandwidth issues based on using hierarchies of commodity switches but
-these solutions can incur high cost\cite{Network}. With this proposal
+these solutions can incur high cost \cite{Network}. With this proposal
 we seek to try and alleviate more of the network pressure to reduce
 costs of such solutions.
+
+The case for using SSD's in an enterprise database setting was
+suggested by Lee et al.\ where they were able to show that SSD's could
+improve throughput of enterprise database applications
+\cite{EnterpriseSSD}. This study also reported that there was room
+left for write optimization on SSD's which could allow for even higher
+performance gains.
+
+Efficient data structures for SSD's have been proposed in the past. Wu
+et al.\ proposed a B-tree structure for use within the SSD's FTL (Flash
+Translation Layer) which lead to better random right throughput, lower
+energy consumption, and less write-wearing \cite{FlashB-Tree}. Li et
+al.\ proposed another tree-like structure called an FD-Tree which led
+to similar results \cite{FD-Tree}.
 
 % end section Related Work
 
