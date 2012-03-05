@@ -26,7 +26,6 @@
  ****************************************************************************/
 #include <linux/blk_types.h>
 #include <linux/atomic.h>
-#include <asm/checksum.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/list.h>
@@ -39,6 +38,8 @@
 #include <linux/pagemap.h>
 #include <linux/dm-io.h>
 #include <linux/dm-kcopyd.h>
+
+#include <asm/checksum.h>
 
 #include "dm.h"
 #include "dm-cache.h"

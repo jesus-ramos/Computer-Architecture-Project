@@ -144,6 +144,12 @@ struct kcached_job {
 	struct page_list *pages;
 };
 
+/* On-disk representation of metadata */
+struct cache_metadata {
+        sector_t block;
+        unsigned short state;
+};
+
 static int cache_insert(struct cache_c *dmc, sector_t block,sector_t cache_block); 
 //static int cache_read_hit(struct cache_c *dmc, struct bio* bio,sector_t cache_block);
 //static int cache_write_cache(struct cache_c *dmc, struct bio* bio, sector_t cache_block,
