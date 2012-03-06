@@ -2045,7 +2045,7 @@ static sector_t calculate_offset( int num_devices)
 		DPRINTK("Calculate offset: %d",num_devices);
 		ret = ret + virtual_mapping[i].dev_size;
 	}
-		DPRINTK("finish Calculate offset: %d",ret);
+		DPRINTK("finish Calculate offset: %ld",ret);
 
 	return ret;
 }
