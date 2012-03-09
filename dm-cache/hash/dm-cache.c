@@ -1866,7 +1866,8 @@ static int load_metadata(struct cache_c *dmc) {
 	struct dm_io_region where;
 	unsigned long bits;
 	sector_t dev_size = dmc->cache_dev->bdev->bd_inode->i_size >> 9;
-	sector_t meta_size, *meta_data, i, j, index = 0, limit, order;
+	sector_t meta_size, i, j, index = 0, limit, order;
+        struct block_metadata *meta_data;
 	struct meta_dmc *meta_dmc;
 	unsigned int chksum = 0, chksum_sav, consecutive_blocks;
 
@@ -1920,7 +1921,7 @@ static int load_metadata(struct cache_c *dmc) {
 		return 1;
 	}
 
-	meta_size = dm_div_up(dmc->size * sizeof(sector_t), 512);
+	meta_size = dm_div_up(dmc->size * sizeof(struct block_metadata), 512);
 	/* When requesting a new bio, the number of requested bvecs has to be
 	   less than BIO_MAX_PAGES. Otherwise, null is returned. In dm-io.c,
 	   this return value is not checked and kernel Oops may happen. We set
@@ -1928,7 +1929,7 @@ static int load_metadata(struct cache_c *dmc) {
 	   required by dm-io for bookeeping.)
 	 */
 	limit = (BIO_MAX_PAGES - 2) * (PAGE_SIZE >> SECTOR_SHIFT);
-	meta_data = (sector_t *)vmalloc(to_bytes(min(meta_size, limit)));
+	meta_data = (struct block_metadata *)vmalloc(to_bytes(min(meta_size, limit)));
 	if (!meta_data) {
 		DMERR("load_metadata: Unable to allocate memory");
 		vfree((void *)dmc->cache);
@@ -1940,15 +1941,12 @@ static int load_metadata(struct cache_c *dmc) {
 		where.count = min(meta_size - index, limit);
 		dm_io_sync_vm(1, &where, READ, meta_data, &bits, dmc);
 
-		for (i=to_bytes(index)/sizeof(sector_t), j=0;
-		     j<to_bytes(where.count)/sizeof(sector_t) && i<dmc->size;
+		for (i=to_bytes(index)/sizeof(struct block_metadata), j=0;
+		     j<to_bytes(where.count)/sizeof(struct block_metadata) && i<dmc->size;
 		     i++, j++) {
-			if(meta_data[j]) {
-				dmc->cache[i].block = meta_data[j];
-				dmc->cache[i].state = 1;
-			} else
-				dmc->cache[i].state = 0;
-		}
+                        dmc->cache[i].block = meta_data[j].block;
+                        dmc->cache[i].state = meta_data[j].state;
+                }
 		chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);
 		index += where.count;
 	}
@@ -1968,17 +1966,19 @@ static int load_metadata(struct cache_c *dmc) {
 }
 
 /* Store metadata onto disk. */
-static int dump_metadata(struct cache_c *dmc) {
+static int dump_metadata(struct cache_c *dmc)
+{
 	struct dm_io_region where;
 	unsigned long bits;
 	sector_t dev_size = dmc->cache_dev->bdev->bd_inode->i_size >> 9;
-	sector_t meta_size, i, j, index = 0, limit, *meta_data;
+	sector_t meta_size, i, j, index = 0, limit; // *meta_data;
+        struct block_metadata *meta_data;
 	struct meta_dmc *meta_dmc;
 	unsigned int chksum = 0;
 
-	meta_size = dm_div_up(dmc->size * sizeof(sector_t), 512);
+	meta_size = dm_div_up(dmc->size * sizeof(struct block_metadata), 512);
 	limit = (BIO_MAX_PAGES - 2) * (PAGE_SIZE >> SECTOR_SHIFT);
-	meta_data = (sector_t *)vmalloc(to_bytes(min(meta_size, limit)));
+	meta_data = (struct block_metadata *)vmalloc(to_bytes(min(meta_size, limit)));
 	if (!meta_data) {
 		DMERR("dump_metadata: Unable to allocate memory");
 		return 1;
@@ -1989,14 +1989,15 @@ static int dump_metadata(struct cache_c *dmc) {
 		where.sector = dev_size - 1 - meta_size + index;
 		where.count = min(meta_size - index, limit);
 
-		for (i=to_bytes(index)/sizeof(sector_t), j=0;
-		     j<to_bytes(where.count)/sizeof(sector_t) && i<dmc->size;
+		for (i=to_bytes(index)/sizeof(struct block_metadata), j=0;
+		     j<to_bytes(where.count)/sizeof(struct block_metadata) && i<dmc->size;
 		     i++, j++) {
 			/* Assume all invalid cache blocks store 0. We lose the block that
 			 * is actually mapped to offset 0.
 			 */
-			meta_data[j] = dmc->cache[i].state ? dmc->cache[i].block : 0;
-		}
+                        meta_data[j].block = dmc->cache[i].block;
+                        meta_data[j].state = dmc->cache[i].state;
+                }
 		chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);
 
 		dm_io_sync_vm(1, &where, WRITE, meta_data, &bits, dmc);
@@ -2049,6 +2050,21 @@ static sector_t calculate_offset( int num_devices)
 
 	return ret;
 }
+
+static void md_flush(struct work_struct *work)
+{
+        struct cache_c *dmc = container_of(work, struct cache_c, md_flush);
+        
+        dump_metadata(dmc);
+
+        mod_timer(&dmc->md_flush_timer, jiffies + msecs_to_jiffies(FLUSH_TIME_MSECS));
+}
+
+static void queue_md_flush(struct cache_c *dmc)
+{
+        queue_work(_kcached_wq, &dmc->md_flush);
+}
+
 /*
  * Construct a cache mapping.
  *  arg[0]: path to source device
@@ -2299,6 +2315,11 @@ init:	/* Initialize the cache structs */
 		spin_lock_init(&dmc->cache[i].lock);
 	}
 
+        INIT_WORK(&dmc->md_flush, md_flush);
+
+        setup_timer(&dmc->md_flush_timer, (void *)queue_md_flush, (unsigned long)dmc);
+        mod_timer(&dmc->md_flush_timer, jiffies + msecs_to_jiffies(FLUSH_TIME_MSECS));
+        
 	dmc->counter = 0;
 	dmc->dirty_blocks = 0;
 	dmc->reads = 0;
@@ -2359,9 +2380,7 @@ static void cache_flush(struct cache_c *dmc)
  */
 static void cache_dtr(struct dm_target *ti)
 {
-//	struct cache_c *dmc = (struct cache_c *) ti->private;
 	struct cache_c *dmc = &shared_cache;
-//	struct dm_dev *virtual_cache = (struct dm_dev *) ti->private;
 	struct v_map *map_dev = (struct v_map *) ti->private;
 
 	DPRINTK("DTR %s",map_dev->src_dev->name);
@@ -2389,13 +2408,11 @@ static void cache_dtr(struct dm_target *ti)
 	}
 	DPRINTK("Destroying devices!");
 
-		//dm_put_device(ti,virtual_mapping[0].src_dev );
-//		dm_put_device(ti, dmc->src_dev);
-//		dm_put_device(ti,virtual_cache);
-		dm_put_device(map_dev->ti,map_dev->src_dev);
+        dm_put_device(map_dev->ti,map_dev->src_dev);
 	
 	dm_dev_identifier--;
-	//kfree(dmc);
+        del_timer(&dmc->md_flush_timer);
+	kfree(dmc);
 }
 
 /*

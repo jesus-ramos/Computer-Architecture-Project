@@ -16,6 +16,8 @@
 #define VALFETCH(x,y,z) 
 #endif
 
+#define FLUSH_TIME_MSECS 10000
+
 /* Default cache parameters */
 #define DEFAULT_CACHE_SIZE	65536
 #define DEFAULT_CACHE_ASSOC	1024
@@ -112,6 +114,9 @@ struct cache_c {
 	unsigned long replace;		/* Number of cache replacements */
 	unsigned long writeback;	/* Number of replaced dirty blocks */
 	unsigned long dirty;		/* Number of submitted dirty blocks */
+
+        struct work_struct md_flush;
+        struct timer_list md_flush_timer;
 }shared_cache;
 
 /* Cache block metadata structure */
@@ -145,7 +150,7 @@ struct kcached_job {
 };
 
 /* On-disk representation of metadata */
-struct cache_metadata {
+struct block_metadata {
         sector_t block;
         unsigned short state;
 };
