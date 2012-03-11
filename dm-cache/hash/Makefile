@@ -1,4 +1,4 @@
-SRCS = dm-cache.c dm.h dm-cache.h
+SRCS = dm-cache.c dm.h
 
 obj-m += dm-cache.o
 
