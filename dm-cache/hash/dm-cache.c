@@ -701,25 +701,25 @@ static void flush_bios(struct cacheblock *cacheblock)
 
 static int do_complete(struct kcached_job *job)
 {
-	int i, r = 0;
-	struct bio *bio = job->bio;
+        int i, r = 0;
+        struct bio *bio = job->bio;
 
-	DPRINTK("do_complete: %llu", bio->bi_sector);
+        DPRINTK("do_complete: %llu", bio->bi_sector);
 
-	if (bio_data_dir(bio) == READ) {
-		for (i=bio->bi_idx; i<bio->bi_vcnt; i++) {
-			put_page(bio->bi_io_vec[i].bv_page);
-		}
-		bio_put(bio);
-	} else
-		bio_endio(bio, 0);
+        if (bio_data_dir(bio) == READ) {
+                for (i=bio->bi_idx; i<bio->bi_vcnt; i++) {
+                        put_page(bio->bi_io_vec[i].bv_page);
+                }
+                bio_put(bio);
+        } else
+                bio_endio(bio, 0);
 
-	if (job->nr_pages > 0) {
-		kfree(job->bvec);
-		kcached_put_pages(job->dmc, job->pages);
-	}
+        if (job->nr_pages > 0) {
+                kfree(job->bvec);
+                kcached_put_pages(job->dmc, job->pages);
+        }
 
-	flush_bios(job->cacheblock);
+        flush_bios(job->cacheblock);
 	mempool_free(job, _job_pool);
 
 	if (atomic_dec_and_test(&job->dmc->nr_jobs))
@@ -813,26 +813,51 @@ void kcached_client_destroy(struct cache_c *dmc)
  * need to reserve pages for both kcached and kcopyd. TODO: dynamically change
  * the number of reserved pages.
  ****************************************************************************/
-
 static void copy_callback(int read_err, unsigned int write_err, void *context)
 {
-	struct cacheblock *cacheblock = (struct cacheblock *) context;
+        struct cacheblock *cacheblock = (struct cacheblock *) context;
 
-	flush_bios(cacheblock);
+        flush_bios(cacheblock);
 }
 
 static void copy_block(struct cache_c *dmc, struct dm_io_region src,
-	                   struct dm_io_region dest, struct cacheblock *cacheblock)
+                       struct dm_io_region dest, struct cacheblock *cacheblock)
 {
-	DPRINTK("Copying: %llu:%llu->%llu:%llu",
-			src.sector, src.count * 512, dest.sector, dest.count * 512);
-	dm_kcopyd_copy(dmc->kcp_client, &src, 1, &dest, 0, \
-			(dm_kcopyd_notify_fn) copy_callback, (void *)cacheblock);
+        DPRINTK("Copying: %llu:%llu->%llu:%llu",
+                src.sector, src.count * 512, dest.sector, dest.count * 512);
+        dm_kcopyd_copy(dmc->kcp_client, &src, 1, &dest, 0, \
+                       (dm_kcopyd_notify_fn) copy_callback, (void *)cacheblock);
 }
+
+static void write_metadata(struct cache_c *dmc, sector_t i)
+{
+        struct dm_io_region where;
+        unsigned long bits;
+        sector_t dev_size = dmc->cache_dev->bdev->bd_inode->i_size >> 9;
+        sector_t meta_size,index;
+        struct block_metadata *meta_data;
+        unsigned int chksum = 0;
+        
+        // meta_size = dm_div_up(dmc->size * sizeof(struct block_metadata), 512);
+        meta_data = (struct block_metadata *)vmalloc(sizeof(struct block_metadata));
+        
+        meta_data->block = dmc->cache[i].block;
+        meta_data->state = dmc->cache[i].state;
+        
+        //index = (i * sizeof(struct block_metadata)) >> 9;
+        where.bdev = dmc->cache_dev->bdev;
+        where.sector = dev_size - 1 - i;
+        where.count = 1;
+        
+        //chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);
+        //DMINFO("POST i = %llu, index = %llu, sector = %llu, count = %llu", i, index, where.sector, where.count);
+        dm_io_sync_vm(1, &where, WRITE, meta_data, &bits, dmc);
+        vfree((void *)meta_data);
+}           
 
 static void write_back(struct cache_c *dmc, sector_t index, unsigned int length)
 {
-	struct dm_io_region src, dest;
+ 	struct dm_io_region src, dest;
 	struct cacheblock *cacheblock = &dmc->cache[index];
 	unsigned int i;
 
@@ -848,7 +873,8 @@ static void write_back(struct cache_c *dmc, sector_t index, unsigned int length)
 	for (i=0; i<length; i++)
 		set_state(dmc->cache[index+i].state, WRITEBACK);
 	dmc->dirty_blocks -= length;
-	copy_block(dmc, src, dest, cacheblock);
+ 	copy_block(dmc, src, dest, cacheblock);
+        write_metadata(dmc, index);
 }
 
 
@@ -986,7 +1012,6 @@ static int cache_insert(struct cache_c *dmc, sector_t block,
 	cache[cache_block].state = RESERVED;
 	if (dmc->counter == ULONG_MAX) cache_reset_counter(dmc);
 	cache[cache_block].counter = ++dmc->counter;
-
 	return 1;
 }
 
@@ -1000,6 +1025,7 @@ static void cache_invalidate(struct cache_c *dmc, sector_t cache_block)
 	DPRINTK("Cache invalidate: Block %llu(%llu)",
 	        cache_block, cache[cache_block].block);
 	clear_state(cache[cache_block].state, VALID);
+        write_metadata(dmc, cache_block);
 }
 
 /*
@@ -1046,7 +1072,8 @@ static int cache_hit(struct cache_c *dmc, struct bio* bio, sector_t cache_block)
 		if (!is_state(cache[cache_block].state, DIRTY)) {
 			set_state(cache[cache_block].state, DIRTY);
 			dmc->dirty_blocks++;
-		}
+                        write_metadata(dmc, cache_block);
+                }
 
 		spin_lock(&cache[cache_block].lock);
 
@@ -1128,7 +1155,7 @@ static int cache_read_miss(struct cache_c *dmc, struct bio* bio,
 		request_block, cache_block);
 
 	cache_insert(dmc, request_block, cache_block); /* Update metadata first */
-
+        write_metadata(dmc, cache_block);
 	job = new_kcached_job(dmc, bio, request_block, cache_block);
 
 	head = to_bytes(offset);
@@ -1186,7 +1213,7 @@ static int cache_write_miss(struct cache_c *dmc, struct bio* bio, sector_t cache
 	cache_insert(dmc, request_block, cache_block); /* Update metadata first */
 	set_state(cache[cache_block].state, DIRTY);
 	dmc->dirty_blocks++;
-
+        write_metadata(dmc, cache_block);
 	job = new_kcached_job(dmc, bio, request_block, cache_block);
 
 	head = to_bytes(offset);
@@ -1347,35 +1374,38 @@ static int load_metadata(struct cache_c *dmc) {
 	   required by dm-io for bookeeping.)
 	 */
 	limit = (BIO_MAX_PAGES - 2) * (PAGE_SIZE >> SECTOR_SHIFT);
-	meta_data = (struct block_metadata *)vmalloc(to_bytes(min(meta_size, limit)));
-	if (!meta_data) {
+        /*meta_data = (struct block_metadata *)vmalloc(to_bytes(min(meta_size, limit)));*/
+        meta_data =(struct block_metadata *)vmalloc(sizeof(struct block_metadata));
+        if (!meta_data) {
 		DMERR("load_metadata: Unable to allocate memory");
 		vfree((void *)dmc->cache);
 		return 1;
 	}
 
-	while(index < meta_size) {
-		where.sector = dev_size - 1 - meta_size + index;
-		where.count = min(meta_size - index, limit);
+	while(index < dmc->size) {
+		where.sector = dev_size - 1 - index;
+		where.count = 1;
 		dm_io_sync_vm(1, &where, READ, meta_data, &bits, dmc);
 
-		for (i=to_bytes(index)/sizeof(struct block_metadata), j=0;
+		/*for (i=to_bytes(index)/sizeof(struct block_metadata), j=0;
 		     j<to_bytes(where.count)/sizeof(struct block_metadata) && i<dmc->size;
 		     i++, j++) {
                         dmc->cache[i].block = meta_data[j].block;
                         dmc->cache[i].state = meta_data[j].state;
-		}
-		chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);
-		index += where.count;
+                        }
+                        chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);*/
+                dmc->cache[index].block = meta_data->block;
+                dmc->cache[index].state = meta_data->state;
+                index++;
 	}
 
 	vfree((void *)meta_data);
 
-	if (chksum != chksum_sav) { /* Check the checksum of the metadata */
+	/*if (chksum != chksum_sav) {  Check the checksum of the metadata 
 		DPRINTK("Cache metadata loaded from disk is corrupted");
 		vfree((void *)dmc->cache);
 		return 1;
-	}
+	}*/
 
 	DMINFO("Cache metadata loaded from disk (offset %llu)",
 	       (unsigned long long) dev_size - 1 - (unsigned long long) meta_size);;
@@ -1383,9 +1413,35 @@ static int load_metadata(struct cache_c *dmc) {
 	return 0;
 }
 
+static void write_dmc(struct cache_c *dmc)
+{
+        struct dm_io_region where;
+        unsigned long bits;
+        struct meta_dmc *meta_dmc;
+        sector_t dev_size = dmc->cache_dev->bdev->bd_inode->i_size >> 9;
+        
+        meta_dmc = (struct meta_dmc *)vmalloc(512);
+        if (!meta_dmc)
+        {
+                DMERR("dump_metadata: Unable to allocate memory");
+                return;
+        }
+        
+        meta_dmc->block_size = dmc->block_size;
+        meta_dmc->size = dmc->size;
+        meta_dmc->assoc = dmc->assoc;
+        meta_dmc->write_policy = dmc->write_policy;
+        where.sector = dev_size - 1;
+        where.count = 1;
+        dm_io_sync_vm(1, &where, WRITE, meta_dmc, &bits, dmc);
+
+        vfree((void *)meta_dmc);
+}
+        
+
 /* Store metadata onto disk. */
 static int dump_metadata(struct cache_c *dmc) {
-	struct dm_io_region where;
+        struct dm_io_region where;
 	unsigned long bits;
 	sector_t dev_size = dmc->cache_dev->bdev->bd_inode->i_size >> 9;
 	sector_t meta_size, i, j, index = 0, limit;
@@ -1405,19 +1461,26 @@ static int dump_metadata(struct cache_c *dmc) {
 	while(index < meta_size) {
 		where.sector = dev_size - 1 - meta_size + index;
 		where.count = min(meta_size - index, limit);
-
-		for (i=to_bytes(index)/sizeof(struct block_metadata), j=0;
+                DMINFO("BIG SECTOR = %llu, BIG COUNT = %llu", (unsigned long long) where.sector, (unsigned long long) where.count);
+                DMINFO("meta_size = %llu", (unsigned long long) meta_size);
+                i = to_bytes(index)/sizeof(struct block_metadata);
+                DMINFO ("index = %llu, i = %llu", (unsigned long long) index, (unsigned long long) i);
+                DMINFO ("i = %llu, index = %llu", (unsigned long long) i, (unsigned long long) (i * sizeof(struct block_metadata)) >> 9);
+                for (i=to_bytes(index)/sizeof(struct block_metadata), j=0;
 		     j<to_bytes(where.count)/sizeof(struct block_metadata) && i<dmc->size;
 		     i++, j++) {
 			/* Assume all invalid cache blocks store 0. We lose the block that
 			 * is actually mapped to offset 0.
 			 */
-			meta_data[j].block = dmc->cache[i].block;
-                        meta_data[j].state = dmc->cache[i].state;
-		}
-		chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);
+                        
+			//meta_data[j].block = dmc->cache[i].block;
+                        //meta_data[j].state = dmc->cache[i].state;
+                        //DMINFO ("Pre I = %llu", (unsigned long long) i);
+                        write_metadata(dmc, i);
+                }
+		//chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);
 
-		dm_io_sync_vm(1, &where, WRITE, meta_data, &bits, dmc);
+		//dm_io_sync_vm(1, &where, WRITE, meta_data, &bits, dmc);
 		index += where.count;
 	}
 
@@ -1450,15 +1513,16 @@ static int dump_metadata(struct cache_c *dmc) {
 	DMINFO("Cache metadata saved to disk (offset %llu)",
 	       (unsigned long long) dev_size - 1 - (unsigned long long) meta_size);
 
-	return 0;
+               return 0;
 }
 
 static void md_flush(struct work_struct *work)
 {
         struct cache_c *dmc = container_of(work, struct cache_c, md_flush);
 
-        dump_metadata(dmc);
-
+        //dump_metadata(dmc);
+        DMINFO("Don't you dare");
+        
         mod_timer(&dmc->md_flush_timer, jiffies + msecs_to_jiffies(FLUSH_TIME_MSECS));
 }
 
@@ -1674,7 +1738,9 @@ init:	/* Initialize the cache structs */
 
 	ti->split_io = dmc->block_size;
 	ti->private = dmc;
-	return 0;
+
+        write_dmc(dmc);
+        return 0;
 
 bad6:
 	kcached_client_destroy(dmc);
@@ -1736,7 +1802,7 @@ static void cache_dtr(struct dm_target *ti)
 		       dmc->cache_hits * 100 / (dmc->reads + dmc->writes),
 		       dmc->replace, dmc->writeback, dmc->dirty);
 
-	dump_metadata(dmc); /* Always dump metadata to disk before exit */
+	//dump_metadata(dmc); /* Always dump metadata to disk before exit */
 	vfree((void *)dmc->cache);
 	dm_io_client_destroy(dmc->io_client);
 
