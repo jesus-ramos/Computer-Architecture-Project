@@ -8,7 +8,7 @@
  *  Authors: Ming Zhao, Stephen Bromfield, Douglas Otstott,
  *    Dulcardo Clavijo (dm-cache@googlegroups.com)
  *  Other contributors:
- *    Eric Van Hensbergen, Reng Zeng 
+ *    Eric Van Hensbergen, Reng Zeng
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -158,7 +158,7 @@ struct block_metadata {
  *  Wrapper functions for using the new dm_io API
  ****************************************************************************/
 static int dm_io_sync_vm(unsigned int num_regions, struct dm_io_region
-	*where, int rw, void *data, unsigned long *error_bits, struct cache_c *dmc)
+                         *where, int rw, void *data, unsigned long *error_bits, struct cache_c *dmc)
 {
 	struct dm_io_request iorq;
 
@@ -172,7 +172,7 @@ static int dm_io_sync_vm(unsigned int num_regions, struct dm_io_region
 }
 
 static int dm_io_async_bvec(unsigned int num_regions, struct dm_io_region
-	*where, int rw, struct bio_vec *bvec, io_notify_fn fn, void *context)
+                            *where, int rw, struct bio_vec *bvec, io_notify_fn fn, void *context)
 {
 	struct kcached_job *job = (struct kcached_job *)context;
 	struct cache_c *dmc = job->dmc;
@@ -236,7 +236,7 @@ static void drop_pages(struct page_list *pl)
 }
 
 static int kcached_get_pages(struct cache_c *dmc, unsigned int nr,
-	                         struct page_list **pages)
+                             struct page_list **pages)
 {
 	struct page_list *pl;
 
@@ -503,7 +503,7 @@ static int do_fetch(struct kcached_job *job)
 		}
 
 		bvec = kmalloc((job->nr_pages + bio->bi_vcnt - bio->bi_idx)
-				* sizeof(*bvec), GFP_KERNEL);
+                               * sizeof(*bvec), GFP_KERNEL);
 		if (!bvec) {
 			DMERR("do_fetch: No memory");
 			return 1;
@@ -530,7 +530,7 @@ static int do_fetch(struct kcached_job *job)
 		if (tail) {
 			idx = i;
 			bvec[i].bv_offset = (to_bytes(offset) + bio->bi_size) &
-			                    (PAGE_SIZE - 1);
+                                (PAGE_SIZE - 1);
 			bvec[i].bv_len = PAGE_SIZE - bvec[i].bv_offset;
 			bvec[i].bv_page = pl->page;
 			tail -= bvec[i].bv_len;
@@ -581,7 +581,7 @@ static int do_store(struct kcached_job *job)
 	   pages, we reuse the pages allocated for the original bio, and mark
 	   each of them to prevent the pages being freed before the cache
 	   insertion is completed.
-	 */
+        */
 	if (bio_data_dir(bio) == READ) {
 		clone = bio_clone(bio, GFP_NOIO);
 		for (i=bio->bi_idx; i<bio->bi_vcnt; i++) {
@@ -625,7 +625,7 @@ static int do_store(struct kcached_job *job)
 			}
 			j = (to_bytes(offset) + bio->bi_size) / PAGE_SIZE;
 			bvec[i].bv_offset = (to_bytes(offset) + bio->bi_size) -
-			                    j * PAGE_SIZE;
+                                j * PAGE_SIZE;
 			bvec[i].bv_len = PAGE_SIZE - bvec[i].bv_offset;
 			bvec[i].bv_page = job->bvec[j].bv_page;
 			tail -= bvec[i].bv_len;
@@ -697,8 +697,8 @@ static void flush_bios(struct cacheblock *cacheblock)
 		generic_make_request(bio);
 		bio = n;
 	}
-	
-	
+
+
 }
 
 static int do_complete(struct kcached_job *job)
@@ -735,7 +735,7 @@ static int do_complete(struct kcached_job *job)
  * of successful jobs.
  */
 static int process_jobs(struct list_head *jobs,
-	                    int (*fn) (struct kcached_job *))
+                        int (*fn) (struct kcached_job *))
 {
 	struct kcached_job *job;
 	int r, count = 0;
@@ -817,31 +817,31 @@ void kcached_client_destroy(struct cache_c *dmc)
  ****************************************************************************/
 
 static void write_metadata(struct cache_c *dmc, sector_t index){
-    struct dm_io_region where;
-    unsigned long bits;
-    sector_t dev_size = dmc->cache_dev->bdev->bd_inode->i_size >> 9;
-    sector_t meta_size, i, limit, sector, base;
-    struct block_metadata *meta_data;
-    unsigned int chksum = 0;
-    
-    meta_size = dm_div_up(dmc->size * sizeof(struct block_metadata), 512);
-    limit = dmc->size/meta_size;
-    sector = index/limit;
-    base = sector * limit;
-    meta_data = (struct block_metadata *) vmalloc(sizeof(struct block_metadata)*limit);
-  
-    for (i = 0; i < limit; i++, base++)
-      {
-	meta_data[i].block = dmc->cache[base].block;
-	meta_data[i].state = dmc->cache[base].state;
-      }
-    where.sector = dev_size - 1 - meta_size + sector;
-    where.count = 1;
+        struct dm_io_region where;
+        unsigned long bits;
+        sector_t dev_size = dmc->cache_dev->bdev->bd_inode->i_size >> 9;
+        sector_t meta_size, i, limit, sector, base;
+        struct block_metadata *meta_data;
+        unsigned int chksum = 0;
 
-    chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);
-    dm_io_sync_vm(1, &where, WRITE, meta_data, &bits, dmc);
-      
-    vfree((void *)meta_data);
+        meta_size = dm_div_up(dmc->size * sizeof(struct block_metadata), 512);
+        limit = dmc->size/meta_size;
+        sector = index/limit;
+        base = sector * limit;
+        meta_data = (struct block_metadata *) vmalloc(sizeof(struct block_metadata)*limit);
+
+        for (i = 0; i < limit; i++, base++)
+        {
+                meta_data[i].block = dmc->cache[base].block;
+                meta_data[i].state = dmc->cache[base].state;
+        }
+        where.sector = dev_size - 1 - meta_size + sector;
+        where.count = 1;
+
+        chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);
+        dm_io_sync_vm(1, &where, WRITE, meta_data, &bits, dmc);
+
+        vfree((void *)meta_data);
 }
 
 
@@ -853,12 +853,12 @@ static void copy_callback(int read_err, unsigned int write_err, void *context)
 }
 
 static void copy_block(struct cache_c *dmc, struct dm_io_region src,
-	                   struct dm_io_region dest, struct cacheblock *cacheblock)
+                       struct dm_io_region dest, struct cacheblock *cacheblock)
 {
 	DPRINTK("Copying: %llu:%llu->%llu:%llu",
-			src.sector, src.count * 512, dest.sector, dest.count * 512);
+                src.sector, src.count * 512, dest.sector, dest.count * 512);
 	dm_kcopyd_copy(dmc->kcp_client, &src, 1, &dest, 0, \
-			(dm_kcopyd_notify_fn) copy_callback, (void *)cacheblock);
+                       (dm_kcopyd_notify_fn) copy_callback, (void *)cacheblock);
 }
 
 static void write_back(struct cache_c *dmc, sector_t index, unsigned int length)
@@ -896,7 +896,7 @@ static unsigned long hash_block(struct cache_c *dmc, sector_t block)
 	unsigned long set_number, value;
 
 	value = (unsigned long)(block >> (dmc->block_shift +
-	        dmc->consecutive_shift));
+                                          dmc->consecutive_shift));
 	set_number = hash_long(value, dmc->bits) / dmc->assoc;
 
  	return set_number;
@@ -938,7 +938,7 @@ static void cache_reset_counter(struct cache_c *dmc)
  *
  */
 static int cache_lookup(struct cache_c *dmc, sector_t block,
-	                    sector_t *cache_block)
+                        sector_t *cache_block)
 {
 	unsigned long set_number = hash_block(dmc, block);
 	sector_t index;
@@ -995,7 +995,7 @@ static int cache_lookup(struct cache_c *dmc, sector_t block,
 
 	if (-1 == res)
 		DPRINTK("Cache lookup: Block %llu(%lu):%s",
-	            block, set_number, "NO ROOM");
+                        block, set_number, "NO ROOM");
 	else
 		DPRINTK("Cache lookup: Block %llu(%lu):%llu(%s)",
 		        block, set_number, *cache_block,
@@ -1007,13 +1007,13 @@ static int cache_lookup(struct cache_c *dmc, sector_t block,
  * Insert a block into the cache (in the frame specified by cache_block).
  */
 static int cache_insert(struct cache_c *dmc, sector_t block,
-	                    sector_t cache_block)
+                        sector_t cache_block)
 {
 	struct cacheblock *cache = dmc->cache;
 
 	/* Mark the block as RESERVED because although it is allocated, the data are
-       not in place until kcopyd finishes its job.
-	 */
+           not in place until kcopyd finishes its job.
+        */
 	cache[cache_block].block = block;
 	cache[cache_block].state = RESERVED;
 	if (dmc->counter == ULONG_MAX) cache_reset_counter(dmc);
@@ -1063,7 +1063,7 @@ static int cache_hit(struct cache_c *dmc, struct bio* bio, sector_t cache_block)
 
 		/* Cache block is not ready yet */
 		DPRINTK("Add to bio list %s(%llu)",
-				dmc->cache_dev->name, bio->bi_sector);
+                        dmc->cache_dev->name, bio->bi_sector);
 		bio_list_add(&cache[cache_block].bios, bio);
 
 		spin_unlock(&cache[cache_block].lock);
@@ -1089,7 +1089,7 @@ static int cache_hit(struct cache_c *dmc, struct bio* bio, sector_t cache_block)
 			/* Delay this write until the block is written back */
 			bio->bi_bdev = dmc->src_dev->bdev;
 			DPRINTK("Add to bio list %s(%llu)",
-					dmc->src_dev->name, bio->bi_sector);
+                                dmc->src_dev->name, bio->bi_sector);
 			bio_list_add(&cache[cache_block].bios, bio);
 			spin_unlock(&cache[cache_block].lock);
 			return 0;
@@ -1100,7 +1100,7 @@ static int cache_hit(struct cache_c *dmc, struct bio* bio, sector_t cache_block)
 			bio->bi_bdev = dmc->cache_dev->bdev;
 			bio->bi_sector = (cache_block << dmc->block_shift) + offset;
 			DPRINTK("Add to bio list %s(%llu)",
-					dmc->cache_dev->name, bio->bi_sector);
+                                dmc->cache_dev->name, bio->bi_sector);
 			bio_list_add(&cache[cache_block].bios, bio);
 			spin_unlock(&cache[cache_block].lock);
 			return 0;
@@ -1116,7 +1116,7 @@ static int cache_hit(struct cache_c *dmc, struct bio* bio, sector_t cache_block)
 }
 
 static struct kcached_job *new_kcached_job(struct cache_c *dmc, struct bio* bio,
-	                                       sector_t request_block,
+                                           sector_t request_block,
                                            sector_t cache_block)
 {
 	struct dm_io_region src, dest;
@@ -1145,7 +1145,8 @@ static struct kcached_job *new_kcached_job(struct cache_c *dmc, struct bio* bio,
  *  store data to cache device.
  */
 static int cache_read_miss(struct cache_c *dmc, struct bio* bio,
-	                       sector_t cache_block) {
+                           sector_t cache_block)
+{
 	struct cacheblock *cache = dmc->cache;
 	unsigned int offset, head, tail;
 	struct kcached_job *job;
@@ -1159,7 +1160,7 @@ static int cache_read_miss(struct cache_c *dmc, struct bio* bio,
 		        cache[cache_block].block, request_block);
 		dmc->replace++;
 	} else DPRINTK("Insert block %llu at empty frame %llu",
-		request_block, cache_block);
+                       request_block, cache_block);
 
 	cache_insert(dmc, request_block, cache_block); /* Update metadata first */
 	write_metadata(dmc, cache_block);
@@ -1215,7 +1216,7 @@ static int cache_write_miss(struct cache_c *dmc, struct bio* bio, sector_t cache
 		        cache[cache_block].block, request_block);
 		dmc->replace++;
 	} else DPRINTK("Insert block %llu at empty frame %llu",
-		request_block, cache_block);
+                       request_block, cache_block);
 
 	/* Write delay */
 	cache_insert(dmc, request_block, cache_block); /* Update metadata first */
@@ -1259,7 +1260,8 @@ static int cache_write_miss(struct cache_c *dmc, struct bio* bio, sector_t cache
 }
 
 /* Handle cache misses */
-static int cache_miss(struct cache_c *dmc, struct bio* bio, sector_t cache_block) {
+static int cache_miss(struct cache_c *dmc, struct bio* bio, sector_t cache_block)
+{
 	if (bio_data_dir(bio) == READ)
 		return cache_read_miss(dmc, bio, cache_block);
 	else
@@ -1275,7 +1277,7 @@ static int cache_miss(struct cache_c *dmc, struct bio* bio, sector_t cache_block
  * Decide the mapping and perform necessary cache operations for a bio request.
  */
 static int cache_map(struct dm_target *ti, struct bio *bio,
-		      union map_info *map_context)
+                     union map_info *map_context)
 {
 	struct cache_c *dmc = (struct cache_c *) ti->private;
 	sector_t request_block, cache_block = 0, offset;
@@ -1286,7 +1288,7 @@ static int cache_map(struct dm_target *ti, struct bio *bio,
 
 	DPRINTK("Got a %s for %llu ((%llu:%llu), %u bytes)",
 	        bio_rw(bio) == WRITE ? "WRITE" : (bio_rw(bio) == READ ?
-	        "READ":"READA"), bio->bi_sector, request_block, offset,
+                                                  "READ":"READA"), bio->bi_sector, request_block, offset,
 	        bio->bi_size);
 
 	if (bio_data_dir(bio) == READ) dmc->reads++;
@@ -1317,7 +1319,8 @@ struct meta_dmc {
 };
 
 /* Load metadata stored by previous session from disk. */
-static int load_metadata(struct cache_c *dmc) {
+static int load_metadata(struct cache_c *dmc)
+{
 	struct dm_io_region where;
 	unsigned long bits;
 	sector_t dev_size = dmc->cache_dev->bdev->bd_inode->i_size >> 9;
@@ -1351,7 +1354,7 @@ static int load_metadata(struct cache_c *dmc) {
 
 	dmc->assoc = meta_dmc->assoc;
 	consecutive_blocks = dmc->assoc < CONSECUTIVE_BLOCKS ?
-	                     dmc->assoc : CONSECUTIVE_BLOCKS;
+                dmc->assoc : CONSECUTIVE_BLOCKS;
 	dmc->consecutive_shift = ffs(consecutive_blocks) - 1;
 
 	dmc->write_policy = meta_dmc->write_policy;
@@ -1382,7 +1385,7 @@ static int load_metadata(struct cache_c *dmc) {
 	   this return value is not checked and kernel Oops may happen. We set
 	   the limit here to avoid such situations. (2 additional bvecs are
 	   required by dm-io for bookeeping.)
-	 */
+        */
 	limit = (BIO_MAX_PAGES - 2) * (PAGE_SIZE >> SECTOR_SHIFT);
 	meta_data = (struct block_metadata *)vmalloc(to_bytes(min(meta_size, limit)));
 	if (!meta_data) {
@@ -1421,7 +1424,8 @@ static int load_metadata(struct cache_c *dmc) {
 }
 
 /* Store metadata onto disk. */
-static int dump_metadata(struct cache_c *dmc) {
+static int dump_metadata(struct cache_c *dmc)
+{
 	struct dm_io_region where;
 	unsigned long bits;
 	sector_t dev_size = dmc->cache_dev->bdev->bd_inode->i_size >> 9;
@@ -1433,48 +1437,48 @@ static int dump_metadata(struct cache_c *dmc) {
 	meta_size = dm_div_up(dmc->size * sizeof(struct block_metadata), 512);
 	limit = dmc->size/meta_size;
 	meta_data = (struct block_metadata *) vmalloc(sizeof(struct block_metadata)*limit);
-	
+
 	for (i = 0; i < meta_size; i++)
-	  {
-	    where.sector = dev_size - 1 - meta_size + i;                                                                                                                                                     
-	    where.count = 1;  
+        {
+                where.sector = dev_size - 1 - meta_size + i;
+                where.count = 1;
 
-	    for (j=0; j < limit && index < dmc->size; j++, index++)
-	      {
-		meta_data[j].block = dmc->cache[index].block;                                                                                                                                                    
-		meta_data[j].state = dmc->cache[index].state;
-	      }
+                for (j=0; j < limit && index < dmc->size; j++, index++)
+                {
+                        meta_data[j].block = dmc->cache[index].block;
+                        meta_data[j].state = dmc->cache[index].state;
+                }
 
-	    chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);
-	    dm_io_sync_vm(1, &where, WRITE, meta_data, &bits, dmc);
-	  }
+                chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);
+                dm_io_sync_vm(1, &where, WRITE, meta_data, &bits, dmc);
+        }
 
 	/*limit = (BIO_MAX_PAGES - 2) * (PAGE_SIZE >> SECTOR_SHIFT);
-	meta_data = (struct block_metadata *)vmalloc(to_bytes(min(meta_size, limit)));
-	if (!meta_data) {
-		DMERR("dump_metadata: Unable to allocate memory");
-		return 1;
-	}
+          meta_data = (struct block_metadata *)vmalloc(to_bytes(min(meta_size, limit)));
+          if (!meta_data) {
+          DMERR("dump_metadata: Unable to allocate memory");
+          return 1;
+          }
 
-	where.bdev = dmc->cache_dev->bdev;
-	while(index < meta_size) {
-		where.sector = dev_size - 1 - meta_size + index;
-		where.count = min(meta_size - index, limit);
+          where.bdev = dmc->cache_dev->bdev;
+          while(index < meta_size) {
+          where.sector = dev_size - 1 - meta_size + index;
+          where.count = min(meta_size - index, limit);
 
-		for (i=to_bytes(index)/sizeof(struct block_metadata), j=0;
-		     j<to_bytes(where.count)/sizeof(struct block_metadata) && i<dmc->size;
-		     i++, j++) {
-			* Assume all invalid cache blocks store 0. We lose the block that
-			 * is actually mapped to offset 0.
-			 
-			meta_data[j].block = dmc->cache[i].block;
-                        meta_data[j].state = dmc->cache[i].state;
-		}
-		chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);
+          for (i=to_bytes(index)/sizeof(struct block_metadata), j=0;
+          j<to_bytes(where.count)/sizeof(struct block_metadata) && i<dmc->size;
+          i++, j++) {
+          * Assume all invalid cache blocks store 0. We lose the block that
+          * is actually mapped to offset 0.
 
-		dm_io_sync_vm(1, &where, WRITE, meta_data, &bits, dmc);
-		index += where.count;
-	}
+          meta_data[j].block = dmc->cache[i].block;
+          meta_data[j].state = dmc->cache[i].state;
+          }
+          chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);
+
+          dm_io_sync_vm(1, &where, WRITE, meta_data, &bits, dmc);
+          index += where.count;
+          }
 	*/
 	vfree((void *)meta_data);
 
@@ -1504,7 +1508,7 @@ static int dump_metadata(struct cache_c *dmc) {
 
 	DMINFO("Cache metadata saved to disk (offset %llu)",
 	       (unsigned long long) dev_size - 1 - (unsigned long long) meta_size);
-	
+
 	return 0;
 }
 
@@ -1602,9 +1606,9 @@ static int cache_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 		}
 		goto init; /* Skip reading cache parameters from command line */
 	} else if (persistence != 0) {
-			ti->error = "dm-cache: Invalid cache persistence";
-			r = -EINVAL;
-			goto bad6;
+                ti->error = "dm-cache: Invalid cache persistence";
+                r = -EINVAL;
+                goto bad6;
 	}
 
 	if (argc >= 4) {
@@ -1647,7 +1651,7 @@ static int cache_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 			goto bad6;
 		}
 		if (!dmc->assoc || (dmc->assoc & (dmc->assoc - 1)) ||
-			dmc->size < dmc->assoc) {
+                    dmc->size < dmc->assoc) {
 			ti->error = "dm-cache: Invalid cache associativity";
 			r = -EINVAL;
 			goto bad6;
@@ -1669,7 +1673,7 @@ static int cache_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 		goto bad6;
 	}
 	consecutive_blocks = dmc->assoc < CONSECUTIVE_BLOCKS ?
-	                     dmc->assoc : CONSECUTIVE_BLOCKS;
+                dmc->assoc : CONSECUTIVE_BLOCKS;
 	dmc->consecutive_shift = ffs(consecutive_blocks) - 1;
 
 	if (argc >= 7) {
@@ -1717,7 +1721,7 @@ init:	/* Initialize the cache structs */
 
         setup_timer(&dmc->md_flush_timer, (void *)queue_md_flush, (unsigned long)dmc);
         mod_timer(&dmc->md_flush_timer, jiffies + msecs_to_jiffies(FLUSH_TIME_MSECS));
-        
+
 	dmc->counter = 0;
 	dmc->dirty_blocks = 0;
 	dmc->reads = 0;
@@ -1761,7 +1765,7 @@ static void cache_flush(struct cache_c *dmc)
 		if (is_state(cache[i].state, DIRTY)) {
 			while ((i+j) < dmc->size && is_state(cache[i+j].state, DIRTY)
 			       && (cache[i+j].block == cache[i].block + j *
-			       dmc->block_size)) {
+                                   dmc->block_size)) {
 				j++;
 			}
 			dmc->dirty += j;
@@ -1787,7 +1791,7 @@ static void cache_dtr(struct dm_target *ti)
 	if (dmc->reads + dmc->writes > 0)
 		DMINFO("stats: reads(%lu), writes(%lu), cache hits(%lu, 0.%lu)," \
 		       "replacement(%lu), replaced dirty blocks(%lu), " \
-	           "flushed dirty blocks(%lu)",
+                       "flushed dirty blocks(%lu)",
 		       dmc->reads, dmc->writes, dmc->cache_hits,
 		       dmc->cache_hits * 100 / (dmc->reads + dmc->writes),
 		       dmc->replace, dmc->writeback, dmc->dirty);
@@ -1800,7 +1804,7 @@ static void cache_dtr(struct dm_target *ti)
 	dm_put_device(ti, dmc->cache_dev);
 
         del_timer(&dmc->md_flush_timer);
-        
+
 	kfree(dmc);
 }
 
@@ -1810,26 +1814,26 @@ static void cache_dtr(struct dm_target *ti)
  *  Output cache configuration upon request of table status.
  */
 static int cache_status(struct dm_target *ti, status_type_t type,
-			 char *result, unsigned int maxlen)
+                        char *result, unsigned int maxlen)
 {
 	struct cache_c *dmc = (struct cache_c *) ti->private;
 	int sz = 0;
 
 	switch (type) {
-	case STATUSTYPE_INFO:
-		DMEMIT("stats: reads(%lu), writes(%lu), cache hits(%lu, 0.%lu)," \
-	           "replacement(%lu), replaced dirty blocks(%lu)",
-	           dmc->reads, dmc->writes, dmc->cache_hits,
-	           (dmc->reads + dmc->writes) > 0 ? \
-	           dmc->cache_hits * 100 / (dmc->reads + dmc->writes) : 0,
-	           dmc->replace, dmc->writeback);
-		break;
-	case STATUSTYPE_TABLE:
-		DMEMIT("conf: capacity(%lluM), associativity(%u), block size(%uK), %s",
-	           (unsigned long long) dmc->size * dmc->block_size >> 11,
-	           dmc->assoc, dmc->block_size>>(10-SECTOR_SHIFT),
-	           dmc->write_policy ? "write-back":"write-through");
-		break;
+                case STATUSTYPE_INFO:
+                        DMEMIT("stats: reads(%lu), writes(%lu), cache hits(%lu, 0.%lu)," \
+                               "replacement(%lu), replaced dirty blocks(%lu)",
+                               dmc->reads, dmc->writes, dmc->cache_hits,
+                               (dmc->reads + dmc->writes) > 0 ? \
+                               dmc->cache_hits * 100 / (dmc->reads + dmc->writes) : 0,
+                               dmc->replace, dmc->writeback);
+                        break;
+                case STATUSTYPE_TABLE:
+                        DMEMIT("conf: capacity(%lluM), associativity(%u), block size(%uK), %s",
+                               (unsigned long long) dmc->size * dmc->block_size >> 11,
+                               dmc->assoc, dmc->block_size>>(10-SECTOR_SHIFT),
+                               dmc->write_policy ? "write-back":"write-through");
+                        break;
 	}
 	return 0;
 }
