@@ -841,15 +841,16 @@ static void write_metadata(struct cache_c *dmc, sector_t index)
         
         where.sector = dev_size - 1 - meta_size + j;
         base = j * limit;
-        DMINFO("Writing sector %llu: %llu", (unsigned long long) where.sector, (unsigned long long) meta_size);
+        if(j >= meta_size)
+                DMINFO("Writing sector %llu:%llu(%llu)", (unsigned long long) where.sector, (unsigned long long ) j, (unsigned long long) index);
         
         for (i = 0; i < limit && base < dmc->size; i++, base++) {
                 meta_data[i].block = dmc->cache[base].block;
                 meta_data[i].state = dmc->cache[base].state;
         }
         
-        chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);
-        dm_io_sync_vm(1, &where, WRITE, meta_data, &bits, dmc);
+        //chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);
+        //dm_io_sync_vm(1, &where, WRITE, meta_data, &bits, dmc);
 
         dmc->flushable[j] = 0;
 
@@ -859,7 +860,7 @@ static void write_metadata(struct cache_c *dmc, sector_t index)
 static void md_flush(struct work_struct *work)
 {
         struct flush_ctxt *f_ctxt = container_of(work, struct flush_ctxt, work);
-
+        DMINFO("CALLING write_metadata");
         write_metadata(f_ctxt->dmc, f_ctxt->index);
 
         kfree(f_ctxt);
@@ -879,8 +880,6 @@ static void copy_callback(int read_err, unsigned int write_err, void *context)
 		cb->dmc->flushable[i] = 1;
 		queue_work(_kcached_wq, &cb->work);
 	}
-
-	kfree(cb);
 }
 
 static void copy_block(struct cache_c *dmc, struct dm_io_region src,
@@ -1081,6 +1080,7 @@ static void cache_invalidate(struct cache_c *dmc, sector_t cache_block)
                 f_ctxt->index = cache_block;
             
 		dmc->flushable[i] = 1;
+                DMINFO("queuing work from cache_invalidate");
 		queue_work(_kcached_wq, &f_ctxt->work);
 	}
 
@@ -1141,6 +1141,7 @@ static int cache_hit(struct cache_c *dmc, struct bio* bio, sector_t cache_block)
                                 f_ctxt->index = cache_block;
                                 
 				dmc->flushable[i] = 1;
+                                DMINFO("queuing work from cache_hit");
 				queue_work(_kcached_wq, &f_ctxt->work);
 			}
 			dmc->dirty_blocks++;
@@ -1238,6 +1239,7 @@ static int cache_read_miss(struct cache_c *dmc, struct bio* bio,
                 f_ctxt->index = cache_block;
 
                 dmc->flushable[i] = 1;
+                DMINFO("queuing work form cache_read_miss");
                 queue_work(_kcached_wq, &f_ctxt->work);
         }
 
@@ -1310,6 +1312,7 @@ static int cache_write_miss(struct cache_c *dmc, struct bio* bio, sector_t cache
                 f_ctxt->index = cache_block;
                 
                 dmc->flushable[i] = 1;
+                DMINFO("queuing work from cache_write_miss");
                 queue_work(_kcached_wq, &f_ctxt->work);
         }
 
