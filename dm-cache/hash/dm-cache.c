@@ -40,6 +40,7 @@
 #include <linux/workqueue.h>
 
 #include <asm/checksum.h>
+#include <asm/div64.h>
 
 #include "dm.h"
 
@@ -830,11 +831,13 @@ static void write_metadata(struct cache_c *dmc, sector_t index)
 	where.count = 1;
 
 	meta_size = dm_div_up(dmc->size * sizeof(struct block_metadata), 512);
-	limit = dmc->size / meta_size;
+        limit = dmc->size;
+	do_div(limit, meta_size);
 	
         meta_data = kmalloc(sizeof(struct block_metadata) * limit, GFP_NOIO);
 
-        j = index / limit;
+        j = index;
+        do_div(j, limit);
         
         where.sector = dev_size - 1 - meta_size + j;
         base = j * limit;
@@ -865,12 +868,15 @@ static void md_flush(struct work_struct *work)
 static void copy_callback(int read_err, unsigned int write_err, void *context)
 {
 	struct flush_ctxt *cb = (struct flush_ctxt *)context;
+        uint64_t i;
         
 	flush_bios(&cb->dmc->cache[cb->index]);
 
-	if(!cb->dmc->flushable[cb->index/cb->dmc->limit]);
+        i = cb->index;
+        do_div(i, cb->dmc->limit);
+	if(!cb->dmc->flushable[i]);
 	{
-		cb->dmc->flushable[cb->index/cb->dmc->limit] = 1;
+		cb->dmc->flushable[i] = 1;
 		queue_work(_kcached_wq, &cb->work);
 	}
 
@@ -1058,19 +1064,23 @@ static void cache_invalidate(struct cache_c *dmc, sector_t cache_block)
 {
 	struct cacheblock *cache = dmc->cache;
         struct flush_ctxt *f_ctxt;
+        uint64_t i;
 
 	DPRINTK("Cache invalidate: Block %llu(%llu)",
 		cache_block, cache[cache_block].block);
 	clear_state(cache[cache_block].state, VALID);
 
-	if(!dmc->flushable[cache_block/dmc->limit])
+        i = cache_block;
+        do_div(i, dmc->limit);
+
+	if(!dmc->flushable[i])
 	{
                 f_ctxt = kmalloc(sizeof(struct flush_ctxt), GFP_NOIO);
                 INIT_WORK(&f_ctxt->work, md_flush);
                 f_ctxt->dmc = dmc;
                 f_ctxt->index = cache_block;
             
-		dmc->flushable[cache_block/dmc->limit] = 1;
+		dmc->flushable[i] = 1;
 		queue_work(_kcached_wq, &f_ctxt->work);
 	}
 
@@ -1089,6 +1099,7 @@ static int cache_hit(struct cache_c *dmc, struct bio* bio, sector_t cache_block)
 	unsigned int offset = (unsigned int)(bio->bi_sector & dmc->block_mask);
 	struct cacheblock *cache = dmc->cache;
         struct flush_ctxt *f_ctxt;
+        uint64_t i;
 
 	dmc->cache_hits++;
 
@@ -1120,14 +1131,16 @@ static int cache_hit(struct cache_c *dmc, struct bio* bio, sector_t cache_block)
 		/* Write delay */
 		if (!is_state(cache[cache_block].state, DIRTY)) {
 			set_state(cache[cache_block].state, DIRTY);
-			if(!dmc->flushable[cache_block/dmc->limit])
+                        i = cache_block;
+                        do_div(i, dmc->limit);
+			if(!dmc->flushable[i])
 			{
                                 f_ctxt = kmalloc(sizeof(struct flush_ctxt), GFP_NOIO);
                                 INIT_WORK(&f_ctxt->work, md_flush);
                                 f_ctxt->dmc = dmc;
                                 f_ctxt->index = cache_block;
                                 
-				dmc->flushable[cache_block/dmc->limit] = 1;
+				dmc->flushable[i] = 1;
 				queue_work(_kcached_wq, &f_ctxt->work);
 			}
 			dmc->dirty_blocks++;
@@ -1202,6 +1215,7 @@ static int cache_read_miss(struct cache_c *dmc, struct bio* bio,
 	struct kcached_job *job;
 	sector_t request_block, left;
         struct flush_ctxt *f_ctxt;
+        uint64_t i;
 
 	offset = (unsigned int)(bio->bi_sector & dmc->block_mask);
 	request_block = bio->bi_sector - offset;
@@ -1214,14 +1228,16 @@ static int cache_read_miss(struct cache_c *dmc, struct bio* bio,
 		       request_block, cache_block);
 
 	cache_insert(dmc, request_block, cache_block); /* Update metadata first */
-	if(!dmc->flushable[cache_block/dmc->limit])
+        i = cache_block;
+        do_div(i, dmc->limit);
+	if(!dmc->flushable[i])
         {
                 f_ctxt = kmalloc(sizeof(struct flush_ctxt), GFP_NOIO);
                 INIT_WORK(&f_ctxt->work, md_flush);
                 f_ctxt->dmc = dmc;
                 f_ctxt->index = cache_block;
 
-                dmc->flushable[cache_block/dmc->limit] = 1;
+                dmc->flushable[i] = 1;
                 queue_work(_kcached_wq, &f_ctxt->work);
         }
 
@@ -1264,6 +1280,7 @@ static int cache_write_miss(struct cache_c *dmc, struct bio* bio, sector_t cache
 	struct kcached_job *job;
 	sector_t request_block, left;
         struct flush_ctxt *f_ctxt;
+        uint64_t i;
 
 	if (dmc->write_policy == WRITE_THROUGH) { /* Forward request to souuce */
 		bio->bi_bdev = dmc->src_dev->bdev;
@@ -1283,14 +1300,16 @@ static int cache_write_miss(struct cache_c *dmc, struct bio* bio, sector_t cache
 	/* Write delay */
 	cache_insert(dmc, request_block, cache_block); /* Update metadata first */
 	set_state(cache[cache_block].state, DIRTY);
-	if(!dmc->flushable[cache_block/dmc->limit])
+        i = cache_block;
+        do_div(i, dmc->limit);
+	if(!dmc->flushable[i])
         {
                 f_ctxt = kmalloc(sizeof(struct flush_ctxt), GFP_NOIO);
                 INIT_WORK(&f_ctxt->work, md_flush);
                 f_ctxt->dmc = dmc;
                 f_ctxt->index = cache_block;
                 
-                dmc->flushable[cache_block/dmc->limit] = 1;
+                dmc->flushable[i] = 1;
                 queue_work(_kcached_wq, &f_ctxt->work);
         }
 
@@ -1457,7 +1476,8 @@ static int load_metadata(struct cache_c *dmc) {
 	   the limit here to avoid such situations. (2 additional bvecs are
 	   required by dm-io for bookeeping.)
 	*/
-	limit = dmc->size/meta_size;
+        limit = dmc->size;
+	do_div(limit, meta_size);
 	meta_data = (struct block_metadata *)vmalloc(sizeof(struct block_metadata) * limit);
 	if (!meta_data){
 		DMERR("load_metadata: Unable to allocate memory");
@@ -1751,7 +1771,8 @@ init:	/* Initialize the cache structs */
 	meta_size = dm_div_up(dmc->size * sizeof(struct block_metadata), 512);
 
         dmc->flushable = kzalloc(meta_size, GFP_NOIO);
-	dmc->limit = dmc->size/meta_size;
+        dmc->limit = dmc->size;
+	do_div(dmc->limit, meta_size);
 	
 	ti->split_io = dmc->block_size;
 	ti->private = dmc;
