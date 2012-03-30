@@ -832,25 +832,25 @@ static void write_metadata(struct cache_c *dmc, sector_t index)
 
 	meta_size = dm_div_up(dmc->size * sizeof(struct block_metadata), 512);
         limit = dmc->size;
-	do_div(limit, meta_size);
 	
         meta_data = kmalloc(sizeof(struct block_metadata) * limit, GFP_NOIO);
 
-        j = index;
-        do_div(j, limit);
+        j = index * meta_size;
+        do_div(j, dmc->size);
         
         where.sector = dev_size - 1 - meta_size + j;
         base = j * limit;
         if(j >= meta_size)
-                DMINFO("Writing sector %llu:%llu(%llu)", (unsigned long long) where.sector, (unsigned long long ) j, (unsigned long long) index);
+                DMINFO("Writing sector %llu:%llu(%llu)\nlimit:%llu, meta_size:%llu\n", (unsigned long long) where.sector,
+                       (unsigned long long ) j, (unsigned long long) index, limit, meta_size);
         
         for (i = 0; i < limit && base < dmc->size; i++, base++) {
                 meta_data[i].block = dmc->cache[base].block;
                 meta_data[i].state = dmc->cache[base].state;
         }
         
-        //chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);
-        //dm_io_sync_vm(1, &where, WRITE, meta_data, &bits, dmc);
+        chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);
+        dm_io_sync_vm(1, &where, WRITE, meta_data, &bits, dmc);
 
         dmc->flushable[j] = 0;
 
@@ -860,7 +860,6 @@ static void write_metadata(struct cache_c *dmc, sector_t index)
 static void md_flush(struct work_struct *work)
 {
         struct flush_ctxt *f_ctxt = container_of(work, struct flush_ctxt, work);
-        DMINFO("CALLING write_metadata");
         write_metadata(f_ctxt->dmc, f_ctxt->index);
 
         kfree(f_ctxt);
@@ -870,22 +869,22 @@ static void copy_callback(int read_err, unsigned int write_err, void *context)
 {
 	struct flush_ctxt *cb = (struct flush_ctxt *)context;
         uint64_t i;
-        
-	flush_bios(&cb->dmc->cache[cb->index]);
-
+        flush_bios(&cb->dmc->cache[cb->index]);
         i = cb->index;
         do_div(i, cb->dmc->limit);
-	if(!cb->dmc->flushable[i]);
+	if(!cb->dmc->flushable[i])
 	{
 		cb->dmc->flushable[i] = 1;
-		queue_work(_kcached_wq, &cb->work);
-	}
+                queue_work(_kcached_wq, &cb->work);
+        }
 }
 
 static void copy_block(struct cache_c *dmc, struct dm_io_region src,
 		       struct dm_io_region dest, struct cacheblock *cacheblock, sector_t index)
 {
         struct flush_ctxt *context = kmalloc(sizeof(struct flush_ctxt), GFP_NOIO);
+        
+        INIT_WORK(&context->work, md_flush);
 	context->dmc = dmc;
 	context->index = index;
 
@@ -913,8 +912,7 @@ static void write_back(struct cache_c *dmc, sector_t index, unsigned int length)
 	for (i=0; i<length; i++)
 		set_state(dmc->cache[index+i].state, WRITEBACK);
 	dmc->dirty_blocks -= length;
-	copy_block(dmc, src, dest, cacheblock, index);
-        
+	copy_block(dmc, src, dest, cacheblock, index);        
 }
 
 
@@ -1080,7 +1078,6 @@ static void cache_invalidate(struct cache_c *dmc, sector_t cache_block)
                 f_ctxt->index = cache_block;
             
 		dmc->flushable[i] = 1;
-                DMINFO("queuing work from cache_invalidate");
 		queue_work(_kcached_wq, &f_ctxt->work);
 	}
 
@@ -1141,8 +1138,7 @@ static int cache_hit(struct cache_c *dmc, struct bio* bio, sector_t cache_block)
                                 f_ctxt->index = cache_block;
                                 
 				dmc->flushable[i] = 1;
-                                DMINFO("queuing work from cache_hit");
-				queue_work(_kcached_wq, &f_ctxt->work);
+                                queue_work(_kcached_wq, &f_ctxt->work);
 			}
 			dmc->dirty_blocks++;
 		}
@@ -1239,7 +1235,6 @@ static int cache_read_miss(struct cache_c *dmc, struct bio* bio,
                 f_ctxt->index = cache_block;
 
                 dmc->flushable[i] = 1;
-                DMINFO("queuing work form cache_read_miss");
                 queue_work(_kcached_wq, &f_ctxt->work);
         }
 
@@ -1312,7 +1307,6 @@ static int cache_write_miss(struct cache_c *dmc, struct bio* bio, sector_t cache
                 f_ctxt->index = cache_block;
                 
                 dmc->flushable[i] = 1;
-                DMINFO("queuing work from cache_write_miss");
                 queue_work(_kcached_wq, &f_ctxt->work);
         }
 
