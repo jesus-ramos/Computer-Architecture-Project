@@ -147,6 +147,7 @@ struct kcached_job {
 	struct bio_vec *bvec;
 	unsigned int nr_pages;
 	struct page_list *pages;
+	sector_t index;
 };
 
 struct block_metadata {
@@ -699,8 +700,43 @@ static void flush_bios(struct cacheblock *cacheblock)
 		generic_make_request(bio);
 		bio = n;
 	}
+}
+static void write_metadata(struct cache_c *dmc, sector_t index)
+{
+	struct dm_io_region where;
+        struct block_metadata *meta_data;
+	unsigned long bits;
+	sector_t dev_size = dmc->cache_dev->bdev->bd_inode->i_size >> 9;
+	sector_t meta_size, i, limit, base, j;
+	unsigned int chksum = 0;
+
+	where.bdev = dmc->cache_dev->bdev;
+	where.count = 1;
+
+	meta_size = dm_div_up(dmc->size * sizeof(struct block_metadata), 512);
+        limit = dmc->size;
 	
-	
+        meta_data = kmalloc(sizeof(struct block_metadata) * limit, GFP_NOIO);
+
+        j = index * meta_size;
+        do_div(j, dmc->size);
+        
+        where.sector = dev_size - 1 - meta_size + j;
+        base = j * limit;
+        if(j >= meta_size)
+                DMINFO("Writing sector %llu:%llu(%llu)\nlimit:%llu, meta_size:%llu\n", (unsigned long long) where.sector, (unsigned long long ) j, (unsigned long long) index, limit, meta_size);
+        
+        for (i = 0; i < limit && base < dmc->size; i++, base++) {
+                meta_data[i].block = dmc->cache[base].block;
+                meta_data[i].state = dmc->cache[base].state;
+        }
+        
+        chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);
+        dm_io_sync_vm(1, &where, WRITE, meta_data, &bits, dmc);
+
+        dmc->flushable[j] = 0;
+
+        kfree(meta_data);
 }
 
 static int do_complete(struct kcached_job *job)
@@ -724,6 +760,9 @@ static int do_complete(struct kcached_job *job)
 	}
 
 	flush_bios(job->cacheblock);
+
+	write_metadata(job->dmc, job->index);
+
 	mempool_free(job, _job_pool);
 
 	if (atomic_dec_and_test(&job->dmc->nr_jobs))
@@ -817,46 +856,6 @@ void kcached_client_destroy(struct cache_c *dmc)
  * need to reserve pages for both kcached and kcopyd. TODO: dynamically change
  * the number of reserved pages.
  ****************************************************************************/
-
-static void write_metadata(struct cache_c *dmc, sector_t index)
-{
-	struct dm_io_region where;
-        struct block_metadata *meta_data;
-	unsigned long bits;
-	sector_t dev_size = dmc->cache_dev->bdev->bd_inode->i_size >> 9;
-	sector_t meta_size, i, limit, base, j;
-	unsigned int chksum = 0;
-
-	where.bdev = dmc->cache_dev->bdev;
-	where.count = 1;
-
-	meta_size = dm_div_up(dmc->size * sizeof(struct block_metadata), 512);
-        limit = dmc->size;
-	
-        meta_data = kmalloc(sizeof(struct block_metadata) * limit, GFP_NOIO);
-
-        j = index * meta_size;
-        do_div(j, dmc->size);
-        
-        where.sector = dev_size - 1 - meta_size + j;
-        base = j * limit;
-        if(j >= meta_size)
-                DMINFO("Writing sector %llu:%llu(%llu)\nlimit:%llu, meta_size:%llu\n", (unsigned long long) where.sector,
-                       (unsigned long long ) j, (unsigned long long) index, limit, meta_size);
-        
-        for (i = 0; i < limit && base < dmc->size; i++, base++) {
-                meta_data[i].block = dmc->cache[base].block;
-                meta_data[i].state = dmc->cache[base].state;
-        }
-        
-        chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);
-        dm_io_sync_vm(1, &where, WRITE, meta_data, &bits, dmc);
-
-        dmc->flushable[j] = 0;
-
-        kfree(meta_data);
-}
-
 static void md_flush(struct work_struct *work)
 {
         struct flush_ctxt *f_ctxt = container_of(work, struct flush_ctxt, work);
@@ -1196,7 +1195,7 @@ static struct kcached_job *new_kcached_job(struct cache_c *dmc, struct bio* bio,
 	job->src = src;
 	job->dest = dest;
 	job->cacheblock = &dmc->cache[cache_block];
-
+	job->index = cache_block;
 	return job;
 }
 
@@ -1821,8 +1820,12 @@ static void cache_flush(struct cache_c *dmc)
 static void cache_dtr(struct dm_target *ti)
 {
 	struct cache_c *dmc = (struct cache_c *) ti->private;
-
+	sector_t i;
+	
 	if (dmc->dirty_blocks > 0) cache_flush(dmc);
+
+	for (i = 0; i < dmc->size; i += dmc->limit)
+		write_metadata(dmc, i);
 
 	kcached_client_destroy(dmc);
 
