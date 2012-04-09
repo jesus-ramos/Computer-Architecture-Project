@@ -647,91 +647,9 @@ static int do_store(struct kcached_job *job)
 	return r;
 }
 
-static void invalidate_metadata(struct cache_c *dmc, sector_t index)
-{
-	struct dm_io_region where;
-        struct block_metadata *meta_data;
-	unsigned long bits;
-	sector_t dev_size = dmc->cache_dev->bdev->bd_inode->i_size >> 9;
-	sector_t meta_size, i, limit, base, j;
-	unsigned int chksum = 0;
-
-	where.bdev = dmc->cache_dev->bdev;
-	where.count = 1;
-
-	meta_size = dm_div_up(dmc->size * sizeof(struct block_metadata), 512);
-        limit = dmc->size;
-	
-        meta_data = kmalloc(sizeof(struct block_metadata) * limit, GFP_NOIO);
-
-        j = index * meta_size;
-        do_div(j, dmc->size);
-        
-        where.sector = dev_size - 1 - meta_size + j;
-        base = j * limit;
-        if(j >= meta_size)
-                DMINFO("Writing sector %llu:%llu(%llu)\nlimit:%llu, meta_size:%llu\n", (unsigned long long) where.sector, (unsigned long long ) j, (unsigned long long) index, limit, meta_size);
-        
-        for (i = 0; i < limit && base < dmc->size; i++, base++) {
-                meta_data[i].block = dmc->cache[base].block;
-                meta_data[i].state = dmc->cache[base].state;
-		if(base == index)
-			meta_data[i].state = 0;
-        }
-        
-        chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);
-        dm_io_sync_vm(1, &where, WRITE, meta_data, &bits, dmc);
-
-        dmc->flushable[j] = 0;
-
-        kfree(meta_data);
-}
-
-static void write_metadata(struct cache_c *dmc, sector_t index)
-{
-	struct dm_io_region where;
-        struct block_metadata *meta_data;
-	unsigned long bits;
-	sector_t dev_size = dmc->cache_dev->bdev->bd_inode->i_size >> 9;
-	sector_t meta_size, i, limit, base, j;
-	unsigned int chksum = 0;
-
-	where.bdev = dmc->cache_dev->bdev;
-	where.count = 1;
-
-	meta_size = dm_div_up(dmc->size * sizeof(struct block_metadata), 512);
-        limit = dmc->size;
-	
-        meta_data = kmalloc(sizeof(struct block_metadata) * limit, GFP_NOIO);
-
-        j = index * meta_size;
-        do_div(j, dmc->size);
-        
-        where.sector = dev_size - 1 - meta_size + j;
-        base = j * limit;
-        if(j >= meta_size)
-                DMINFO("Writing sector %llu:%llu(%llu)\nlimit:%llu, meta_size:%llu\n", (unsigned long long) where.sector, (unsigned long long ) j, (unsigned long long) index, limit, meta_size);
-        
-        for (i = 0; i < limit && base < dmc->size; i++, base++) {
-                meta_data[i].block = dmc->cache[base].block;
-                meta_data[i].state = dmc->cache[base].state;
-        }
-        
-        chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);
-        dm_io_sync_vm(1, &where, WRITE, meta_data, &bits, dmc);
-
-        dmc->flushable[j] = 0;
-
-        kfree(meta_data);
-}
-
 static int do_io(struct kcached_job *job)
 {
-	struct cache_c *dmc = job->dmc;
-	sector_t index = job->index;
 	int r = 0;
-	
-	invalidate_metadata(dmc, index);
 
 	if (job->rw == READ) { /* Read from source device */
 		r = do_fetch(job);
@@ -782,6 +700,48 @@ static void flush_bios(struct cacheblock *cacheblock)
 		generic_make_request(bio);
 		bio = n;
 	}
+}
+static void write_metadata(struct cache_c *dmc, sector_t index)
+{
+	struct dm_io_region where;
+        struct block_metadata *meta_data;
+	unsigned long bits;
+	sector_t dev_size = dmc->cache_dev->bdev->bd_inode->i_size >> 9;
+	sector_t meta_size, i, limit, base, j;
+	unsigned int chksum = 0;
+
+	where.bdev = dmc->cache_dev->bdev;
+	where.count = 1;
+
+	meta_size = dm_div_up(dmc->size * sizeof(struct block_metadata), 512);
+        limit = dmc->size;
+	
+        meta_data = kmalloc(sizeof(struct block_metadata) * limit, GFP_NOIO);
+
+        j = index * meta_size;
+        do_div(j, dmc->size);
+        
+        where.sector = dev_size - 1 - meta_size + j;
+        base = j * limit;
+        if(j >= meta_size)
+                DMINFO("Writing sector %llu:%llu(%llu)\nlimit:%llu, meta_size:%llu\n", (unsigned long long) where.sector, (unsigned long long ) j, (unsigned long long) index, limit, meta_size);
+        
+        for (i = 0; i < limit && base < dmc->size; i++, base++) {
+                if (dmc->cache[base].state == VALID || dmc->cache[base].state == DIRTY) {
+                        meta_data[i].block = dmc->cache[base].block;
+                        meta_data[i].state = dmc->cache[base].state;
+                } else {
+                        meta_data[i].block = 0;
+                        meta_data[i].state = INVALID;
+                }
+        }
+        
+        chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);
+        dm_io_sync_vm(1, &where, WRITE, meta_data, &bits, dmc);
+
+        dmc->flushable[j] = 0;
+
+        kfree(meta_data);
 }
 
 static int do_complete(struct kcached_job *job)
@@ -904,7 +864,7 @@ void kcached_client_destroy(struct cache_c *dmc)
 static void md_flush(struct work_struct *work)
 {
         struct flush_ctxt *f_ctxt = container_of(work, struct flush_ctxt, work);
-        //write_metadata(f_ctxt->dmc, f_ctxt->index);
+        write_metadata(f_ctxt->dmc, f_ctxt->index);
 
         kfree(f_ctxt);
 }
@@ -1356,7 +1316,7 @@ static int cache_write_miss(struct cache_c *dmc, struct bio* bio, sector_t cache
 
 
 	dmc->dirty_blocks++;
-
+        
 	job = new_kcached_job(dmc, bio, request_block, cache_block);
 
 	head = to_bytes(offset);
@@ -1940,7 +1900,7 @@ static struct target_type cache_target = {
 	.ctr    = cache_ctr,
 	.dtr    = cache_dtr,
 	.map    = cache_map,
-	.status = cache_status,
+	.status = cache_status
 };
 
 /*

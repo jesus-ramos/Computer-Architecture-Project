@@ -1,5 +1,5 @@
 SRCS = dm-cache.c dm.h
-
+EXTRA_CFLAGS :=-g
 obj-m += dm-cache.o
 
 all:
