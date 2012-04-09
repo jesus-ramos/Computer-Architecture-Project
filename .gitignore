@@ -17,3 +17,4 @@
 *.mod.c
 *.symvers
 TAGS
+.DS_Store
