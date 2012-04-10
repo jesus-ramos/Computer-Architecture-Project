@@ -2,7 +2,7 @@ DOC = paper
 
 all: 
 	pdflatex $(DOC)
-	#bibtex $(DOC)
+	bibtex $(DOC)
 	pdflatex $(DOC)
 	pdflatex $(DOC)
 

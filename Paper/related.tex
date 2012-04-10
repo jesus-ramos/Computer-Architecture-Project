@@ -1,0 +1,25 @@
+\section{Related Work}
+\label{sec:related}
+
+The argument for SSD's in enterprise solutions was proposed by Lee et
+al.\ where they were able to show that SSD's could improve the
+throughput of enterprise database
+applications~\cite{EnterpriseSSD}. DM-Cache was created for extending
+this functionality to network storage devices for throughput
+improvement of remote storage. Our work builds upon DM-Cache by
+providing a fault tolerant persistence layer to alleviate the costs of
+system failure once the system is brought back online.
+
+Previous work has been done before on communication architectures to
+alleviate network bandwidth issues such as work by Al-Fares et al.\
+which involved using hierarchies of commodity
+switches~\cite{Network}. With this work we seek to eliminate or reduce
+the effect of failures on network storage by implementing mechanisms
+to recover those recently used blocks on the cache which means less
+requests for data that resides on the storage network.
+
+Error recovery in caching systems is not a new idea and has been shown
+to work effectively in cloud based systems such as
+RAMCloud~\cite{RAMCloud}. With this work we extend that idea by
+providing fault tolerance capabilities to block level caching
+mechanisms present in the Linux kernel.

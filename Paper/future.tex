@@ -1,0 +1,11 @@
+\section{Future Work}
+\label{sec:future}
+
+While our approach to handling metadata writes is quite naive in it's
+implementation and simply a proof of concept, there are more efficient
+ways to handle writing metadata to SSD's such as the FD-Tree
+structure~\cite{FD-Tree} and Flash B-tree's~\cite{FlashB-Tree}. Both
+of these data structures lead to similar improvements in random write
+throughput, lower energy consumption, and more efficient handling of
+write-wearing. We plan on extending our current approach with this
+work for more efficient metadata persistence mechanisms.
