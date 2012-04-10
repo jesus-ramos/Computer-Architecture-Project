@@ -4,3 +4,27 @@
 \subsection{Design Considerations}
 
 \subsection{Implementation}
+
+We leverage current mechanisms implemented in DM-Cache for metadata
+management. The current implementation employs a persistence scheme
+that allows you to write all the metadata for the cache upon
+destruction of the cache. The problem with this implementation is that
+in the event of a system failure we don't have the convenience of this
+code being executed so all metadata is lost.
+
+\subsubsection{Metadata Representation}
+
+The metadata representation also only took into account valid blocks
+in the cache. We extend this by allowing it to also handle blocks that
+have been marked as dirty and are pending to be written back to the
+storage device. We do this by creating a small structure which
+contains the block number and the state of that block on the disk and
+write this to the end of the disk along with a metadata header for the
+whole cache. We can use this header to determine how many blocks of
+metadata to read from the disk in order to restore previous cache
+state.
+
+\subsubsection{Persistence Mechanism}
+
+% Journal style transactions, invalidate, write data, write metadata
+% (validate) need to get some numbers to check this though %
