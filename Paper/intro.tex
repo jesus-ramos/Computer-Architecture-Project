@@ -1,7 +1,13 @@
 \section{Introduction}
 
 We have designed and implemented fault tolerance mechanisms in the
-Linux kernel module DM-Cache~\cite{DM-Cache}.
+Linux kernel module DM-Cache~\cite{DM-Cache}. With little overhead
+this mechanism allows for cache recovery in the event of a system
+failure. Our scheme alleviates the network traffic that would normally
+happen from having to retrieve blocks from the storage network that
+were already present on the cache. We can also recover blocks that
+would have otherwise been lost that had not been written back to the
+network which would have resulted in lost data.
 
 The remainder of this paper is organized as follows. In the following
 section we provide background information on block level caching

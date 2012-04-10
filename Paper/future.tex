@@ -9,3 +9,9 @@ of these data structures lead to similar improvements in random write
 throughput, lower energy consumption, and more efficient handling of
 write-wearing. We plan on extending our current approach with this
 work for more efficient metadata persistence mechanisms.
+
+We can make the overhead costs and how often metadata should be
+persisted variable values depending on how tolerant the system should
+be or what the acceptable overhead is for maintaining consistency
+between the cache and its metadata. This way it is more applicable to
+more workloads which may fall under tighter data constraints.

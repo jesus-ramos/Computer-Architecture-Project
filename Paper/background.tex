@@ -1,1 +1,18 @@
 \section{Background}
+
+\subsection{Storage Area Networks}
+
+\subsection{Enterprise SSD Usage}
+
+\subsection{DM-Cache}
+
+DM-Cache is a block-level caching mechanism implemented as a module in
+the Linux kernel~\cite{DM-Cache}. It allows for specification of a
+cache device where recently used blocks retrieved from network storage
+can be stored for faster access time. It supports both write-through
+and write-back functionality for handling cached data.
+
+The current metadata persistence scheme in DM-Cache only works if the
+cache is properly destroyed. In the event of a failure no metadata is
+persisted to disk and the metadata that contains the location of the
+cached blocks on the disk is lost.
