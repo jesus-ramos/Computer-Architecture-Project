@@ -3,6 +3,16 @@
 
 \subsection{Design Considerations}
 
+The two main design considerations of our implementation are data
+consistency and overhead. With data consistency we want to make sure
+that we never have invalid data in the cache's metadata that could
+cause corruption. We also want to make sure that we have an acceptable
+overhead so as to not impact the performance of the cache.
+
+\subsubsection{Data Consistency}
+
+\subsubsection{Overhead}
+
 \subsection{Implementation}
 
 We leverage current mechanisms implemented in DM-Cache for metadata
@@ -12,17 +22,27 @@ destruction of the cache. The problem with this implementation is that
 in the event of a system failure we don't have the convenience of this
 code being executed so all metadata is lost.
 
+To overcome these limitations we came up with a new way to represent
+metadata on the cache device as well as a persistence mechanism that
+ensures data consistency.
+
 \subsubsection{Metadata Representation}
 
-The metadata representation also only took into account valid blocks
-in the cache. We extend this by allowing it to also handle blocks that
-have been marked as dirty and are pending to be written back to the
-storage device. We do this by creating a small structure which
-contains the block number and the state of that block on the disk and
-write this to the end of the disk along with a metadata header for the
-whole cache. We can use this header to determine how many blocks of
-metadata to read from the disk in order to restore previous cache
-state.
+The metadata representation in the current version of DM-Cache only
+takes into account valid blocks or blocks that do not have pending
+changes in the cache. We extend this by allowing it to also handle
+blocks that have been marked as dirty and are pending to be written
+back to the storage device. We do this by creating a small structure
+which contains the sector number and the state of that block on the
+disk and write this to the end of the disk along with a metadata
+header for the whole cache. We can use this header to determine how
+many blocks of metadata to read from the disk in order to restore
+previous cache state.
+
+When the cache is being reconstructed we simply read this header off
+the end of the disk to reinitialize the cache parameters and using
+this data we also read the metadata and restore the mapping in the
+cache to its previous state.
 
 \subsubsection{Persistence Mechanism}
 

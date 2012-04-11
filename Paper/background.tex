@@ -12,7 +12,19 @@ cache device where recently used blocks retrieved from network storage
 can be stored for faster access time. It supports both write-through
 and write-back functionality for handling cached data.
 
+The purpose of DM-Cache is to cache recently used blocks on local
+storage instead of retrieving them from some external storage source
+every time they are needed. This helps alleviate network bandwidth as
+well as reduce latency and improve response time to requests.
+
 The current metadata persistence scheme in DM-Cache only works if the
 cache is properly destroyed. In the event of a failure no metadata is
 persisted to disk and the metadata that contains the location of the
 cached blocks on the disk is lost.
+
+Another limitation of this scheme is that only blocks that are valid
+or have not been modified have their metadata persisted. When a cache
+is destroyed all dirty blocks have their changes written back to the
+storage device (in the case of a write-back cache) but in the event of
+a failure this is not true as blocks can still be pending write back
+during this time.
