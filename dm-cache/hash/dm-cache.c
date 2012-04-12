@@ -1758,7 +1758,8 @@ init:	/* Initialize the cache structs */
 		dmc->cache[i].counter = 0;
 		spin_lock_init(&dmc->cache[i].lock);
 	}
-        
+
+                
 	dmc->counter = 0;
 	dmc->dirty_blocks = 0;
 	dmc->reads = 0;
@@ -1778,7 +1779,15 @@ init:	/* Initialize the cache structs */
 	ti->split_io = dmc->block_size;
 	ti->private = dmc;
 	
-	return 0;
+        if(!persistence)
+        {
+                for (i = 0; i < dmc->size; i += dmc->limit)
+                        write_metadata(dmc, i);
+        }
+
+
+
+        return 0;
 
 bad6:
 	kcached_client_destroy(dmc);
