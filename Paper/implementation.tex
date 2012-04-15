@@ -9,10 +9,6 @@ that we never have invalid data in the cache's metadata that could
 cause corruption. We also want to make sure that we have an acceptable
 overhead so as to not impact the performance of the cache.
 
-\subsubsection{Data Consistency}
-
-\subsubsection{Overhead}
-
 \subsection{Implementation}
 
 We leverage current mechanisms implemented in DM-Cache for metadata
@@ -39,6 +35,25 @@ header for the whole cache. We can use this header to determine how
 many blocks of metadata to read from the disk in order to restore
 previous cache state.
 
+Internally DM-Cache uses a hash table to represent the metadata for
+the blocks. Our mechanism uses the same representation on disk. We use
+the last sector of the specified cache device to store a metadata
+header which has information about the cache itself such as size and
+number of entries. We write our metadata sequentially starting after
+this metadata header. A limit of the current implementation is that
+the size of the cache itself has to be a perfect power of two due to
+the way that the indexes in the hash table are calculated. This allows
+us to safely use those sectors for simplicity of implementation.
+
+To persist this information we bundle our metadata into blocks which
+are the same size as the block size of the device and simply try and
+fit as many as we can into one block. We do this because each metadata
+entry that should be persisted is a lot smaller than the devices block
+size and as such we can bundle many of them together. This way we
+write the smallest possible amount of data for every metadata update
+while avoiding having to issue a lot of writes for metadata that is
+updated in a short period of time.
+
 When the cache is being reconstructed we simply read this header off
 the end of the disk to reinitialize the cache parameters and using
 this data we also read the metadata and restore the mapping in the
@@ -46,5 +61,15 @@ cache to its previous state.
 
 \subsubsection{Persistence Mechanism}
 
-% Journal style transactions, invalidate, write data, write metadata
-% (validate) need to get some numbers to check this though %
+We take a journaling style approach to data persistence with DM-Cache
+to ensure that we never have any invalid blocks in the
+metadata. Before committing a data operation we invalidate that entry
+in the hash table on disk. This is to ensure that if the data
+operation fails we don't use a block that was not fully written. Once
+the data is written we write the correct block state to disk.
+
+In DM-Cache all work that does I/O is managed through a central work
+queue. Whenever a cached block is either: \textcolor{red}{methods that
+  call write\_metadata()}, we mark the metadata block that needs to be
+written to disk and place it on the work queue along with the I/O for
+the actual data.

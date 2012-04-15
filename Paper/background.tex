@@ -2,15 +2,25 @@
 
 \subsection{Storage Area Networks}
 
+Due to the physical limitation of local storage many enterprise
+solutions choose to employ Storage Area Networks or SAN's as they are
+more commonly referred to in an attempt to centralize storage access
+and provide larger storage capabilities. They also provide for
+simplification of virtual machine migration and increased data
+reliability. While this solves the issue of storage size it increases
+request latency and could possibly create bandwidth issues either on
+the network or on the storage devices themselves due to the number of
+requests from different machines.
+
 \subsection{Enterprise SSD Usage}
 
 \subsection{DM-Cache}
 
 DM-Cache is a block-level caching mechanism implemented as a module in
 the Linux kernel~\cite{DM-Cache}. It allows for specification of a
-cache device where recently used blocks retrieved from network storage
-can be stored for faster access time. It supports both write-through
-and write-back functionality for handling cached data.
+local cache device where recently used blocks can be stored for faster
+access time. It supports both write-through and write-back
+functionality for handling cached data.
 
 The purpose of DM-Cache is to cache recently used blocks on local
 storage instead of retrieving them from some external storage source
