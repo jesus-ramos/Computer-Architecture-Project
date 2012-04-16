@@ -707,26 +707,28 @@ static void write_metadata(struct cache_c *dmc, sector_t index)
         struct block_metadata *meta_data;
 	unsigned long bits;
 	sector_t dev_size = dmc->cache_dev->bdev->bd_inode->i_size >> 9;
-	sector_t meta_size, i, limit, base, j;
-	unsigned int chksum = 0;
+	sector_t i, limit, base, j;
 
 	where.bdev = dmc->cache_dev->bdev;
 	where.count = 1;
-
-	meta_size = dm_div_up(dmc->size * sizeof(struct block_metadata), 512);
-        limit = dmc->size;
-	
-        meta_data = kmalloc(sizeof(struct block_metadata) * limit, GFP_NOIO);
-
-        j = index * meta_size;
-        do_div(j, dmc->size);
         
-        where.sector = dev_size - 1 - meta_size + j;
+        limit = dmc->limit;
+        //meta_data = kmalloc(dmc->cache_dev->bdev->bd_block_size, GFP_NOIO);
+        meta_data = (struct block_metadata *)vmalloc(dmc->cache_dev->bdev->bd_block_size);
+
+        j = index;
+        do_div(j, dmc->limit);
+
+        where.sector = dev_size - 2 - j;
         base = j * limit;
-        if(j >= meta_size)
-                DMINFO("Writing sector %llu:%llu(%llu)\nlimit:%llu, meta_size:%llu\n", (unsigned long long) where.sector, (unsigned long long ) j, (unsigned long long) index, limit, meta_size);
+
+        /* DMINFO("INDEX: %d LIMIT: %d sector: %llu", index, limit, where.sector); */
+        /* if(where.sector >= dev_size) { */
+        /*         DMINFO("Writing sector %llu:%llu(%llu)\nlimit:%llu, meta_size:%llu\n", (unsigned long long) where.sector, (unsigned long long ) j, (unsigned long long) index, limit); */
+        /*         where.sector = dev_size - 2; */
+        /* } */
         
-        for (i = 0; i < limit && base < dmc->size; i++, base++) {
+        for (i = 0; i < limit && base < dmc->size; i++, base++)
                 if (dmc->cache[base].state == VALID || dmc->cache[base].state == DIRTY) {
                         meta_data[i].block = dmc->cache[base].block;
                         meta_data[i].state = dmc->cache[base].state;
@@ -734,14 +736,13 @@ static void write_metadata(struct cache_c *dmc, sector_t index)
                         meta_data[i].block = 0;
                         meta_data[i].state = INVALID;
                 }
-        }
         
-        chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);
         dm_io_sync_vm(1, &where, WRITE, meta_data, &bits, dmc);
 
         dmc->flushable[j] = 0;
 
-        kfree(meta_data);
+        //kfree(meta_data);
+        vfree((void *)meta_data);
 }
 
 static int do_complete(struct kcached_job *job)
@@ -1560,6 +1561,7 @@ static int dump_metadata(struct cache_c *dmc) {
 	where.bdev = dmc->cache_dev->bdev;
 	where.sector = dev_size - 1;
 	where.count = 1;
+        DMINFO("DUMP SECTOR: %llu", where.sector);
 	dm_io_sync_vm(1, &where, WRITE, meta_dmc, &bits, dmc);
 
 	vfree((void *)meta_dmc);
@@ -1758,8 +1760,7 @@ init:	/* Initialize the cache structs */
 		dmc->cache[i].counter = 0;
 		spin_lock_init(&dmc->cache[i].lock);
 	}
-
-                
+        
 	dmc->counter = 0;
 	dmc->dirty_blocks = 0;
 	dmc->reads = 0;
@@ -1770,24 +1771,17 @@ init:	/* Initialize the cache structs */
 	dmc->dirty = 0;
 	dump_metadata(dmc);
 
-	meta_size = dm_div_up(dmc->size * sizeof(struct block_metadata), 512);
+        DMINFO("METASIZE: %d", sizeof(struct block_metadata));
+        DMINFO("BLOCK SIZE: %llu", dmc->cache_dev->bdev->bd_block_size);
+        meta_size = dm_div_up(dmc->size * sizeof(struct block_metadata), dmc->cache_dev->bdev->bd_block_size);
 
         dmc->flushable = kzalloc(meta_size, GFP_NOIO);
-        dmc->limit = dmc->size;
-	do_div(dmc->limit, meta_size);
+        dmc->limit = dmc->cache_dev->bdev->bd_block_size / sizeof(struct block_metadata);
 	
 	ti->split_io = dmc->block_size;
 	ti->private = dmc;
 	
-        if(!persistence)
-        {
-                for (i = 0; i < dmc->size; i += dmc->limit)
-                        write_metadata(dmc, i);
-        }
-
-
-
-        return 0;
+	return 0;
 
 bad6:
 	kcached_client_destroy(dmc);
