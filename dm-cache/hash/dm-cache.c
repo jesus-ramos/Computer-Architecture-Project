@@ -713,20 +713,13 @@ static void write_metadata(struct cache_c *dmc, sector_t index)
 	where.count = 1;
         
         limit = dmc->limit;
-        //meta_data = kmalloc(dmc->cache_dev->bdev->bd_block_size, GFP_NOIO);
-        meta_data = (struct block_metadata *)vmalloc(dmc->cache_dev->bdev->bd_block_size);
+        meta_data = (struct block_metadata *)vmalloc(512);
 
         j = index;
         do_div(j, dmc->limit);
 
         where.sector = dev_size - 2 - j;
-        base = j * limit;
-
-        /* DMINFO("INDEX: %d LIMIT: %d sector: %llu", index, limit, where.sector); */
-        /* if(where.sector >= dev_size) { */
-        /*         DMINFO("Writing sector %llu:%llu(%llu)\nlimit:%llu, meta_size:%llu\n", (unsigned long long) where.sector, (unsigned long long ) j, (unsigned long long) index, limit); */
-        /*         where.sector = dev_size - 2; */
-        /* } */
+        base = index;
         
         for (i = 0; i < limit && base < dmc->size; i++, base++)
                 if (dmc->cache[base].state == VALID || dmc->cache[base].state == DIRTY) {
@@ -741,7 +734,6 @@ static void write_metadata(struct cache_c *dmc, sector_t index)
 
         dmc->flushable[j] = 0;
 
-        //kfree(meta_data);
         vfree((void *)meta_data);
 }
 
@@ -1411,7 +1403,8 @@ struct meta_dmc {
 };
 
 /* Load metadata stored by previous session from disk. */
-static int load_metadata(struct cache_c *dmc) {
+static int load_metadata(struct cache_c *dmc)
+{
 	struct dm_io_region where;
 	unsigned long bits;
 	sector_t dev_size = dmc->cache_dev->bdev->bd_inode->i_size >> 9;
@@ -1453,7 +1446,6 @@ static int load_metadata(struct cache_c *dmc) {
 
 	vfree((void *)meta_dmc);
 
-
 	order = dmc->size * sizeof(struct cacheblock);
 	DMINFO("Allocate %lluKB (%luB per) mem for %llu-entry cache" \
 	       "(capacity:%lluMB, associativity:%u, block size:%u " \
@@ -1478,53 +1470,33 @@ static int load_metadata(struct cache_c *dmc) {
 	   the limit here to avoid such situations. (2 additional bvecs are
 	   required by dm-io for bookeeping.)
 	*/
-        limit = dmc->size;
-	do_div(limit, meta_size);
-	meta_data = (struct block_metadata *)vmalloc(sizeof(struct block_metadata) * limit);
+	meta_data = (struct block_metadata *)vmalloc(512);
 	if (!meta_data){
 		DMERR("load_metadata: Unable to allocate memory");
 		vfree((void *)dmc->cache);
 		return 1;
 	}
-	
-	/*while(index < meta_size) {
-		where.sector = dev_size - 1 - meta_size + index;
-		where.count = min(meta_size - index, limit);
-		dm_io_sync_vm(1, &where, READ, meta_data, &bits, dmc);
 
-		for (i=to_bytes(index)/sizeof(struct block_metadata), j=0;
-		     j<to_bytes(where.count)/sizeof(struct block_metadata) && i<dmc->size;
-		     i++, j++) {
-			dmc->cache[i].block = meta_data[j].block;
-			dmc->cache[i].state = meta_data[j].state;
-		}
-		chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);
-		index += where.count;
-		}*/
-	
-	for (i = 0; i < meta_size; i++)
-	{
-		where.sector = dev_size - 1 - meta_size + i; 
-		where.count = 1;  
+        limit = dmc->limit;
+	for (i = 0; i < meta_size; i++) {
+		where.sector = dev_size - 1 - i; 
+		where.count = 1;
 		dm_io_sync_vm(1, &where, READ, meta_data, &bits, dmc);
 		
-		for (j=0; j < limit && index < dmc->size; j++, index++)
-		{
+		for (j=0; j < limit && index < dmc->size; j++, index++) {
 			dmc->cache[index].block = meta_data[j].block;
 			dmc->cache[index].state = meta_data[j].state;
 		}
-		
-		chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);
+		//chksum = csum_partial((char *)meta_data, to_bytes(where.count), chksum);
 	}
 	
-
 	vfree((void *)meta_data);
 
-	if (chksum != chksum_sav) { /* Check the checksum of the metadata */
-		DPRINTK("Cache metadata loaded from disk is corrupted");
-		//vfree((void *)dmc->cache);
-		return 0;
-	}
+	/* if (chksum != chksum_sav) { /\* Check the checksum of the metadata *\/ */
+	/* 	DPRINTK("Cache metadata loaded from disk is corrupted"); */
+	/* 	//vfree((void *)dmc->cache); */
+	/* 	return 0; */
+	/* } */
 
 	DMINFO("Cache metadata loaded from disk (offset %llu)",
 	       (unsigned long long) dev_size - 1 - (unsigned long long) meta_size);;
@@ -1533,7 +1505,8 @@ static int load_metadata(struct cache_c *dmc) {
 }
 
 /* Store metadata onto disk. */
-static int dump_metadata(struct cache_c *dmc) {
+static int dump_metadata(struct cache_c *dmc)
+{
 	struct dm_io_region where;
 	unsigned long bits;
 	sector_t dev_size = dmc->cache_dev->bdev->bd_inode->i_size >> 9;
@@ -1771,12 +1744,10 @@ init:	/* Initialize the cache structs */
 	dmc->dirty = 0;
 	dump_metadata(dmc);
 
-        DMINFO("METASIZE: %d", sizeof(struct block_metadata));
-        DMINFO("BLOCK SIZE: %llu", dmc->cache_dev->bdev->bd_block_size);
-        meta_size = dm_div_up(dmc->size * sizeof(struct block_metadata), dmc->cache_dev->bdev->bd_block_size);
+        meta_size = dm_div_up(dmc->size * sizeof(struct block_metadata), 512);
 
         dmc->flushable = kzalloc(meta_size, GFP_NOIO);
-        dmc->limit = dmc->cache_dev->bdev->bd_block_size / sizeof(struct block_metadata);
+        dmc->limit = 512 / sizeof(struct block_metadata);
 	
 	ti->split_io = dmc->block_size;
 	ti->private = dmc;
