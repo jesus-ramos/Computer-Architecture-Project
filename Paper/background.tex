@@ -1,5 +1,11 @@
 \section{Background}
 
+Our work focuses on multiple aspects of cloud systems namely storage
+area networks or SAN's, usage of SSD's in enterprise environments, and
+block level caching. We chose DM-Cache as the block level caching
+mechanism to evaluate our work on as it is freely available as a part
+of the Linux kernel.
+
 \subsection{Storage Area Networks}
 
 Due to the physical limitation of local storage many enterprise
@@ -14,10 +20,19 @@ requests from different machines.
 
 \subsection{Enterprise SSD Usage}
 
+Many enterprise cloud solutions employ SSD's where storage latency or
+throughput can be bottlenecks for applications. In work by Lee et al.\
+they were able to show that using SSD's for enterprise database
+applications resulted in performance gains because of throughput
+improvement \cite{EnterpriseSSD}. Their work made the case for usage
+of SSD's in enterprise environments.
+
+% maybe some works about caching with SSD %
+
 \subsection{DM-Cache}
 
 DM-Cache is a block-level caching mechanism implemented as a module in
-the Linux kernel~\cite{DM-Cache}. It allows for specification of a
+the Linux kernel \cite{DM-Cache}. It allows for specification of a
 local cache device where recently used blocks can be stored for faster
 access time. It supports both write-through and write-back
 functionality for handling cached data.

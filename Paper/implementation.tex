@@ -61,15 +61,25 @@ cache to its previous state.
 
 \subsubsection{Persistence Mechanism}
 
-We take a journaling style approach to data persistence with DM-Cache
-to ensure that we never have any invalid blocks in the
-metadata. Before committing a data operation we invalidate that entry
-in the hash table on disk. This is to ensure that if the data
-operation fails we don't use a block that was not fully written. Once
-the data is written we write the correct block state to disk.
-
 In DM-Cache all work that does I/O is managed through a central work
 queue. Whenever a cached block is either: \textcolor{red}{methods that
   call write\_metadata()}, we mark the metadata block that needs to be
 written to disk and place it on the work queue along with the I/O for
 the actual data.
+
+We write the metadata after the actual data commits. There is a small
+chance that the data update can fail and hence we have invalid or
+corrupt data in the cache but because the metadata is committed to
+disk afterwards the metadata on disk does not reflect this. We believe
+this chance to be very small and using a journaling style approach
+where we invalidate the metadata for that entry, write the data, and
+then validate it once we are sure the data is written has a higher
+overhead. During our testing we didn't find any instances where there
+was corrupt data when restoring the cache from metadata after a
+simulated failure.
+
+In the event of a failure you can choose load the metadata that was
+present on the disk at the time of failure. During initialization we
+read the metadata header stored at the end of the disk first and using
+that information restore the cache to its previous state by reading
+the remaining metadata and restoring the previous cache mappings.
