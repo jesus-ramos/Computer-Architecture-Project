@@ -1434,6 +1434,7 @@ static int load_metadata(struct cache_c *dmc)
 	dmc->block_mask = dmc->block_size - 1;
 
 	dmc->size = meta_dmc->size;
+        dmc->limit = 512 / sizeof(struct block_metadata);
 	dmc->bits = ffs(dmc->size) - 1;
 
 	dmc->assoc = meta_dmc->assoc;
@@ -1479,7 +1480,7 @@ static int load_metadata(struct cache_c *dmc)
 
         limit = dmc->limit;
 	for (i = 0; i < meta_size; i++) {
-		where.sector = dev_size - 1 - i; 
+		where.sector = dev_size - 2 - i; 
 		where.count = 1;
 		dm_io_sync_vm(1, &where, READ, meta_data, &bits, dmc);
 		
@@ -1742,12 +1743,13 @@ init:	/* Initialize the cache structs */
 	dmc->replace = 0;
 	dmc->writeback = 0;
 	dmc->dirty = 0;
-	dump_metadata(dmc);
+        if (!persistence)
+                dump_metadata(dmc);
 
         meta_size = dm_div_up(dmc->size * sizeof(struct block_metadata), 512);
+        dmc->limit = 512 / sizeof(struct block_metadata);
 
         dmc->flushable = kzalloc(meta_size, GFP_NOIO);
-        dmc->limit = 512 / sizeof(struct block_metadata);
 	
 	ti->split_io = dmc->block_size;
 	ti->private = dmc;
