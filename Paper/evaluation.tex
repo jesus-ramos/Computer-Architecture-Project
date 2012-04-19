@@ -16,3 +16,23 @@ within DM-Cache we only show evaluation of DM-Cache using our
 persistence mechanism with write-through. Our testing shows no issues
 with the actual data when running experiments but the kernel logs show
 some file-system warnings so we omit those results.
+
+\subsection{IOZone}
+
+We use the IOZone benchmark to evaluate the throughput of DM-Cache as
+a cold cache with and without metadata persistence enabled as well as
+a warm cache with and without metadata persistence enabled to
+calculate the overhead.
+
+Because we are only using the write-through mechanism in our
+evaluation the only throughput results that are meaningful to us are
+the read throughput statistics. Reread is not significant because that
+will use the data that is cached in RAM.
+
+For each test run we create and initialize a new cache and run IOZone
+with different I/O sizes and record the results. To evaluate the
+results of a warm cache we simply run the read workload in IOZone and
+then drop the page cache for the system so that it is forced to do I/O
+rather than simply reading the information from RAM.
+
+% put some figures with the numbers in %

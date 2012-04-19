@@ -1,3 +1,24 @@
 \begin{abstract}
 
+  System failure has become the norm in commodity hardware based
+  systems. Rather than try to avoid errors completely they accept that
+  errors will happen and instead find ways to more quickly
+  recover. For systems that employ block level caching and remote
+  storage networks this usually results in having to fetch recently
+  used blocks from the storage area network once again to warm up the
+  cache once more. To address this problem we have implemented a
+  metadata persistence mechanism to DM-Cache to allow recovery of the
+  cache in the event of a system failure.
+
+  Our metadata persistence scheme is implemented and evaluated using
+  the latest version of DM-Cache on Linux kernel version 3.3. It's
+  overhead was evaluated using the IOZone benchmark and a network
+  storage drive using Open-iSCSI. The results show that the overhead
+  costs can outweigh the benefits for read heavy workloads and cache
+  recovery time is almost instant. Our experiments also showed no data
+  corruption in the event of simulated failures and that recovering
+  the cache from metadata allowed the throughput of the system to
+  resume what it was before the failure without having to retrieve all
+  the cached blocks from network storage again.
+
 \end{abstract}

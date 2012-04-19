@@ -46,13 +46,13 @@ the way that the indexes in the hash table are calculated. This allows
 us to safely use those sectors for simplicity of implementation.
 
 To persist this information we bundle our metadata into blocks which
-are the same size as the block size of the device and simply try and
-fit as many as we can into one block. We do this because each metadata
-entry that should be persisted is a lot smaller than the devices block
-size and as such we can bundle many of them together. This way we
-write the smallest possible amount of data for every metadata update
-while avoiding having to issue a lot of writes for metadata that is
-updated in a short period of time.
+are the same size as the sector size of the device and simply try and
+fit as many as we can into one sector. We do this because each
+metadata entry that should be persisted is a lot smaller than the
+devices block size and as such we can bundle many of them
+together. This way we write the smallest possible amount of data for
+every metadata update while avoiding having to issue a lot of writes
+for metadata that is updated in a short period of time.
 
 When the cache is being reconstructed we simply read this header off
 the end of the disk to reinitialize the cache parameters and using

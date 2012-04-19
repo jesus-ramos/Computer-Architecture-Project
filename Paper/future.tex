@@ -15,3 +15,10 @@ persisted variable values depending on how tolerant the system should
 be or what the acceptable overhead is for maintaining consistency
 between the cache and its metadata. This way it is more applicable to
 more workloads which may fall under tighter data constraints.
+
+Although our current implementation had issues with write back it's
+possible that this would benefit from fault tolerance as well. In
+cases where there is a system failure and you currently have dirty
+blocks in the cache this could mean data loss but if the metadata
+representing those blocks could be recovered then the dirty blocks
+could be written back without loss of data.

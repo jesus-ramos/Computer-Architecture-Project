@@ -1,18 +1,17 @@
 \section{Motivation}
 \label{sec:motivation}
 
-% add reference to google fs paper %
 With the widespread use of commodity hardware in many systems such as
-the Google File System, error recovery has become the new focus. In
-environments such as these errors and failures are accepted as the
-norm and error recovery techniques become the critical components of
-the system. For a system employing block level caching failures in the
-system would mean fetching blocks from network storage all over again
-and attempting to get the system back to its previous state so it can
-continue its task. We wish to mitigate this issue by allowing easy
-recovery of a cache in the event of a failure this way nodes that have
-failed can continue their tasks from where they left off with minimal
-recovery overhead.
+the Google File System \cite{GFS}, error recovery has become the new
+focus. In environments such as these errors and failures are accepted
+as the norm and error recovery techniques become the critical
+components of the system. For a system employing block level caching
+failures in the system would mean fetching blocks from network storage
+all over again and attempting to get the system back to its previous
+state so it can continue its task. We wish to mitigate this issue by
+allowing easy recovery of a cache in the event of a failure this way
+nodes that have failed can continue their tasks from where they left
+off with minimal recovery overhead.
 
 Recovering the data that was already present in the cache would
 mitigate recovery time since the cache will already be warm which
@@ -24,3 +23,10 @@ would add overhead but with emerging SSD technology and the response
 time and throughput of SSD's the overhead that would be incurred under
 normal operation is acceptable in some cases if it guarantees quick
 recovery from a failure.
+
+While the issue of the overhead comes into play when it comes to
+performance we believe that certain workloads with lower throughput
+requirements. For read heavy workloads where the cache is warmed up
+and not modified very often the cache with metadata persistence should
+perform the same as the cache with no persistence while still having
+the added benefit of being able to recover from failure.
