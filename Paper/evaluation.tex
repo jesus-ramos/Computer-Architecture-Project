@@ -7,10 +7,12 @@ the workloads offered by the IOZone benchmark to evaluate the overhead
 of this mechanism.
 
 We use two testing machines and iSCSI and assign one of the machines
-to be the client and the other the storage target using Open-iSCSI.
+to be the client and the other the storage target using Open-iSCSI. We
+evaluated our approach on two different SSD's, an Mtron Pro 7500 64GB
+and a \textcolor{red}{whatever that vertex one is}.
 
 Due to issues with the implementation of the write-back mechanism
-within DM-Cache we only show evaluation of DM-Cache using
-write-through. Our testing shows no issues with the actual data when
-running experiments but the kernel logs show some issues
-\textcolor{red}{that bit cleared thingy} so we omit those results.
+within DM-Cache we only show evaluation of DM-Cache using our
+persistence mechanism with write-through. Our testing shows no issues
+with the actual data when running experiments but the kernel logs show
+some file-system warnings so we omit those results.
