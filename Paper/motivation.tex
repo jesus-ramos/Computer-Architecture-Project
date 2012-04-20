@@ -24,9 +24,10 @@ time and throughput of SSD's the overhead that would be incurred under
 normal operation is acceptable in some cases if it guarantees quick
 recovery from a failure.
 
-While the issue of the overhead comes into play when it comes to
-performance we believe that certain workloads with lower throughput
-requirements. <<INCOMPLETE SENTENCE For read heavy workloads where the cache is warmed up
-and not modified very often the cache with metadata persistence should
+For read heavy workloads, where the cache is warmed up and not
+modified very often, the cache with metadata persistence should
 perform the same as the cache with no persistence while still having
-the added benefit of being able to recover from failure.
+the added benefit of being able to recover from failure. This
+mechanism is also applicable to applications with less stringent
+throughput requirements where fault tolerance can benefit the system
+overall and the overhead is acceptable.
