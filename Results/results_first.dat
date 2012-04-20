@@ -1,4 +1,4 @@
-"Run Number"    "No Persistence"         "Metadata Persistence"
-1               37917                    16011
-2               37725                    16066
-3               38664                    16097
+"Cache Size"    "No Persistence"         "Metadata Persistence"
+512             37917                    16011
+1024            37725                    16066
+2048            38664                    16097

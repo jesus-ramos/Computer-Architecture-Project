@@ -62,8 +62,8 @@ cache to its previous state.
 \subsubsection{Persistence Mechanism}
 
 In DM-Cache all work that does I/O is managed through a central work
-queue. Whenever a cached block is either: \textcolor{red}{methods that
-  call write\_metadata()}, we mark the metadata block that needs to be
+queue. Whenever a cached block is either: inserted, invalidated, or
+when a write completes, we mark the metadata block that needs to be
 written to disk and place it on the work queue along with the I/O for
 the actual data.
 

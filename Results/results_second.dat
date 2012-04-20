@@ -1,4 +1,4 @@
-"Run Number"    "No Persistence"         "Metadata Persistence"
-1               89777                    62666
-2               88521                    63203
-3               88154                    63904
+"Cache Size"    "No Persistence"         "Metadata Persistence"
+512              89777                    62666
+1024             88521                    63203
+2048             88154                    63904

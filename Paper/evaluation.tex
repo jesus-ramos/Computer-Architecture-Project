@@ -6,18 +6,15 @@ DM-Cache running on Linux kernel version 3.3. To evaluate this we use
 the workloads offered by the IOZone benchmark to evaluate the overhead
 of this mechanism.
 
-We use two testing machines and iSCSI and assign one of the machines
-to be the client and the other the storage target using Open-iSCSI. We
-evaluated our approach on an Mtron Pro 7500 64GB SSD. We used an Mtron
-SSD to get a good upper bound on our performance overhead as Mtron
-SSD's (as compared to Intel and Vertex SSD's) have slower write
-performance \cite{FIOS}.
+For testing we connected two machines via iSCSI. One machine serves as
+the iSCSI-target/network-storage and is running Ubuntu 11.10. The
+second machine serves as the iSCSI-client running Arch Linux with the
+3.3 kernel and issues the storage requests to the iSCSI-target.
 
-Testing was also done use a 128GB Vertex SSD but we saw no performance
-overhead due to the high write efficiency of Vertex SSD's for these
-types of workloads \cite{FIOS}. We omit these results as the
-throughput was the same in all cases both with and without our
-metadata persistence mechanism.
+We evaluated our approach on an Mtron Pro 7500 64GB SSD. We used an
+Mtron SSD to get a good upper bound on our performance overhead as
+Mtron SSD's (as compared to Intel and Vertex SSD's) have slower write
+performance \cite{FIOS}.
 
 Due to issues with the implementation of the write-back mechanism
 within DM-Cache we only show evaluation of DM-Cache using our
@@ -37,12 +34,13 @@ evaluation the only throughput results that are meaningful to us are
 the read throughput statistics. Reread is not significant because that
 will use the data that is cached in RAM.
 
-For each test run we create and initialize a new 2GB cache and run
-IOZone with different I/O sizes and record the results. To evaluate
-the results of a warm cache we simply run the read workload in IOZone
-and then drop the page cache for the system so that it is forced to do
-I/O rather than simply reading the information from RAM while the
-information is still stored in the cache.
+For each test run we create and initialize a new cache and run IOZone
+on different sized caches and record the results. We use cache sizes
+of 512MB, 1GB and 2GB. To evaluate the results of a warm cache we
+simply run the read workload in IOZone and then drop the page cache
+for the system so that it is forced to do I/O rather than simply
+reading the information from RAM while the information is still stored
+in the cache.
 
 \graphicspath{{../Results/}}
 
