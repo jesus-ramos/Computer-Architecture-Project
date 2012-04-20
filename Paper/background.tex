@@ -35,7 +35,16 @@ DM-Cache is a block-level caching mechanism implemented as a module in
 the Linux kernel \cite{DM-Cache}. It allows for specification of a
 local cache device where recently used blocks can be stored for faster
 access time. It supports both write-through and write-back
-functionality for handling cached data.
+functionality for handling cached data. Figure~\ref{fig:dm-cache}
+shows the architecture of DM-Cache.
+
+\graphicspath{{../Images/}}
+
+\begin{figure}[t]
+  \caption{Architecture of DM-Cache}
+  \centering \includegraphics[width=0.5\textwidth]{NewerImage.png}
+  \label{fig:dm-cache}
+\end{figure}
 
 The purpose of DM-Cache is to cache recently used blocks on local
 storage instead of retrieving them from some external storage source

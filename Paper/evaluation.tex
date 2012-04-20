@@ -13,6 +13,12 @@ SSD to get a good upper bound on our performance overhead as Mtron
 SSD's (as compared to Intel and Vertex SSD's) have slower write
 performance \cite{FIOS}.
 
+Testing was also done use a 128GB Vertex SSD but we saw no performance
+overhead due to the high write efficiency of Vertex SSD's for these
+types of workloads \cite{FIOS}. We omit these results as the
+throughput was the same in all cases both with and without our
+metadata persistence mechanism.
+
 Due to issues with the implementation of the write-back mechanism
 within DM-Cache we only show evaluation of DM-Cache using our
 persistence mechanism with write-through. Our testing shows no issues
@@ -38,4 +44,26 @@ and then drop the page cache for the system so that it is forced to do
 I/O rather than simply reading the information from RAM while the
 information is still stored in the cache.
 
-% put some figures with the numbers in %
+\graphicspath{{../Results/}}
+
+\begin{figure}[t]
+  \caption{IOZone Read Workload with Cold Cache}
+  \centering \includegraphics[width=0.5\textwidth]{results_first.png}
+  \label{fig:iozone-cold}
+\end{figure}
+
+\begin{figure}[t]
+  \caption{IOZone Read Workload with Warm Cache}
+  \centering \includegraphics[width=0.5\textwidth]{results_second.png}
+  \label{fig:iozone-warm}
+\end{figure}
+
+In Figure~\ref{fig:iozone-cold} it can be seen that inserting a lot of
+blocks into the cache along with our metadata persistence mechanism
+causing extra writes can slow down performance by about 50\%. This is
+because metadata is being updated constantly because every block
+fetched is not cached so it has to be written to the cache device
+along with relevant metadata for each
+block. Figure~\ref{fig:iozone-warm} shows that once the cache has
+reached a state where access is mostly read hits performance comes
+closer to a cache without persistence by about 75\%.

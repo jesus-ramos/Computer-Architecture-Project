@@ -22,3 +22,8 @@ cases where there is a system failure and you currently have dirty
 blocks in the cache this could mean data loss but if the metadata
 representing those blocks could be recovered then the dirty blocks
 could be written back without loss of data.
+
+We only evaluated our persistence mechanism on two SSD's namely an
+Mtron and Vertex SSD. For future work we will run tests on more SSD's
+as it seems that write performance of SSD's can vary widely between
+manufacturers.

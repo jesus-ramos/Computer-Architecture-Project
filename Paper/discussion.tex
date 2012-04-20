@@ -1,2 +1,14 @@
 \section{Discussion}
 \label{sec:discussion}
+
+Depending on the type of SSD used for a cache device this mechanism
+can range from no overhead at all to as high as a 25\% to 50\%
+reduction in throughput. The Vertex SSD far outperformed the Mtron SSD
+in terms of writes and thus was able to mask the overhead of our
+persistence mechanism by using internal hardware write
+optimizations. The Mtron SSD shows results of what could be considered
+our worst case scenario because, as stated previously, the Mtron SSD's
+write performance far trails that of the Vertex SSD. This is another
+consideration that can be used when determining whether to use our
+metadata persistence scheme as the choice of SSD manufacturer will
+affect performance.
