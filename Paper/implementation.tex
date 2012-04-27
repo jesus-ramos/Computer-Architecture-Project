@@ -83,3 +83,20 @@ present on the disk at the time of failure. During initialization we
 read the metadata header stored at the end of the disk first and using
 that information restore the cache to its previous state by reading
 the remaining metadata and restoring the previous cache mappings.
+
+\subsection{Metadata Batching}
+
+All I/O requests processed by DM-Cache are issued via a work queue
+structure which induces a delay between the actual submission of the
+work to be processed and it's execution. The main purpose of the work
+queue is that it is thread safe and prevents starvation of rival
+processes. It also allows the current operation to finish without
+incurring the cost of the metadata write.
+
+We can leverage this delay to amortize the cost of metadata updates,
+if many updates happen in a short period of time to the same metadata
+block we attempt to dispatch all those updates as a single write
+operation to the cache device. We prevent multiple metadata write
+operations within the same metadata block by holding a flag on each
+metadata block indicating that the block is pending or in the process
+of being written.

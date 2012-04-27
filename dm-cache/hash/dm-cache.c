@@ -161,6 +161,9 @@ struct flush_ctxt {
         struct work_struct work;
 };
 
+unsigned long long md_writes = 0;
+unsigned long long batch_count = 0;
+
 /****************************************************************************
  *  Wrapper functions for using the new dm_io API
  ****************************************************************************/
@@ -735,6 +738,7 @@ static void write_metadata(struct cache_c *dmc, sector_t index)
         dmc->flushable[j] = 0;
 
         vfree((void *)meta_data);
+        md_writes++;
 }
 
 static int do_complete(struct kcached_job *job)
@@ -869,10 +873,11 @@ static void copy_callback(int read_err, unsigned int write_err, void *context)
         flush_bios(&cb->dmc->cache[cb->index]);
         i = cb->index;
         do_div(i, cb->dmc->limit);
-	if(!cb->dmc->flushable[i])
-	{
+	if(!cb->dmc->flushable[i]) {
 		cb->dmc->flushable[i] = 1;
                 queue_work(_kcached_wq, &cb->work);
+        } else {
+                batch_count++;
         }
 }
 
@@ -1067,8 +1072,7 @@ static void cache_invalidate(struct cache_c *dmc, sector_t cache_block)
         i = cache_block;
         do_div(i, dmc->limit);
 
-	if(!dmc->flushable[i])
-	{
+	if(!dmc->flushable[i]) {
                 f_ctxt = kmalloc(sizeof(struct flush_ctxt), GFP_NOIO);
                 INIT_WORK(&f_ctxt->work, md_flush);
                 f_ctxt->dmc = dmc;
@@ -1076,8 +1080,9 @@ static void cache_invalidate(struct cache_c *dmc, sector_t cache_block)
             
 		dmc->flushable[i] = 1;
 		queue_work(_kcached_wq, &f_ctxt->work);
-	}
-
+	} else {
+                batch_count++;
+        }
 }
 
 /*
@@ -1136,7 +1141,9 @@ static int cache_hit(struct cache_c *dmc, struct bio* bio, sector_t cache_block)
                                 
 				dmc->flushable[i] = 1;
                                 queue_work(_kcached_wq, &f_ctxt->work);
-			}
+			} else {
+                                batch_count++;
+                        }
 			dmc->dirty_blocks++;
 		}
 
@@ -1224,8 +1231,7 @@ static int cache_read_miss(struct cache_c *dmc, struct bio* bio,
 	cache_insert(dmc, request_block, cache_block); /* Update metadata first */
         i = cache_block;
         do_div(i, dmc->limit);
-	if(!dmc->flushable[i])
-        {
+	if(!dmc->flushable[i]) {
                 f_ctxt = kmalloc(sizeof(struct flush_ctxt), GFP_NOIO);
                 INIT_WORK(&f_ctxt->work, md_flush);
                 f_ctxt->dmc = dmc;
@@ -1233,8 +1239,9 @@ static int cache_read_miss(struct cache_c *dmc, struct bio* bio,
 
                 dmc->flushable[i] = 1;
                 queue_work(_kcached_wq, &f_ctxt->work);
+        } else {
+                batch_count++;
         }
-
 
 	job = new_kcached_job(dmc, bio, request_block, cache_block);
 
@@ -1296,8 +1303,7 @@ static int cache_write_miss(struct cache_c *dmc, struct bio* bio, sector_t cache
 	set_state(cache[cache_block].state, DIRTY);
         i = cache_block;
         do_div(i, dmc->limit);
-	if(!dmc->flushable[i])
-        {
+	if(!dmc->flushable[i]) {
                 f_ctxt = kmalloc(sizeof(struct flush_ctxt), GFP_NOIO);
                 INIT_WORK(&f_ctxt->work, md_flush);
                 f_ctxt->dmc = dmc;
@@ -1305,8 +1311,9 @@ static int cache_write_miss(struct cache_c *dmc, struct bio* bio, sector_t cache
                 
                 dmc->flushable[i] = 1;
                 queue_work(_kcached_wq, &f_ctxt->work);
+        } else {
+                batch_count++;
         }
-
 
 	dmc->dirty_blocks++;
         
@@ -1832,6 +1839,8 @@ static void cache_dtr(struct dm_target *ti)
         kfree(dmc->flushable);
         
 	kfree(dmc);
+
+        DMINFO("TOTAL MD_WRITES: %llu, BATCHED: %llu", md_writes, batch_count);
 }
 
 /*

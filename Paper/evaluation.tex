@@ -9,12 +9,19 @@ of this mechanism.
 For testing we connected two machines via iSCSI. One machine serves as
 the iSCSI-target/network-storage and is running Ubuntu 11.10. The
 second machine serves as the iSCSI-client running Arch Linux with the
-3.3 kernel and issues the storage requests to the iSCSI-target.
+3.3 kernel and issues the storage requests to the iSCSI-target. The
+average network latency between the two machines was between 0.3ms and
+0.4ms.
 
 We evaluated our approach on an Mtron Pro 7500 64GB SSD. We used an
 Mtron SSD to get a good upper bound on our performance overhead as
 Mtron SSD's (as compared to Intel and Vertex SSD's) have slower write
 performance \cite{FIOS}.
+
+To evaluate the improvement of batching we simply keep track of all
+metadata writes and we keep a counter that keeps track of the number
+of times we batch a metadata write with a pending update on that same
+metadata block.
 
 Due to issues with the implementation of the write-back mechanism
 within DM-Cache we only show evaluation of DM-Cache using our
@@ -56,12 +63,16 @@ in the cache.
   \label{fig:iozone-warm}
 \end{figure}
 
-In Figure~\ref{fig:iozone-cold} it can be seen that inserting a lot of
+In Figure \ref{fig:iozone-cold} it can be seen that inserting a lot of
 blocks into the cache along with our metadata persistence mechanism
 causing extra writes can slow down performance by about 50\%. This is
 because metadata is being updated constantly because every block
 fetched is not cached so it has to be written to the cache device
-along with relevant metadata for each
-block. Figure~\ref{fig:iozone-warm} shows that once the cache has
-reached a state where access is mostly read hits performance comes
-closer to a cache without persistence by about 75\%.
+along with relevant metadata for each block. Figure
+\ref{fig:iozone-warm} shows that once the cache has reached a state
+where access is mostly read hits performance comes closer to a cache
+without persistence by about 75\%.
+
+\subsection{Metadata Batching}
+
+% evaluation of metadata batching stuff %
