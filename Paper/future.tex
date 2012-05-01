@@ -27,3 +27,17 @@ We only evaluated our persistence mechanism on two SSD's namely an
 Mtron and Vertex SSD. For future work we will run tests on more SSD's
 as it seems that write performance of SSD's can vary widely between
 manufacturers.
+
+Our batching efficiency was pretty good already mostly due to how we
+pack a lot of metadata into one block and write the whole block at
+once. DM-Cache currently uses the kernel function
+\texttt{hash\_long()} to calculate the hash values for the blocks to
+place in its internal mapping and it's possible that we will benefit
+more from matching if we use a uniform distribution that places
+sequential physical blocks sequentially in the mapping. This will give
+us more locality and help avoid even more writes since most accesses
+are sequential and we can issue many of these updates in one write
+operation. Another possibility is to use a function that depends on
+how often the metadata gets updated this way ``hot'' metadata that is
+updated more often is grouped together which allows us to get even
+more benefit from batched metadata updates.

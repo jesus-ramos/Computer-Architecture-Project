@@ -98,5 +98,7 @@ if many updates happen in a short period of time to the same metadata
 block we attempt to dispatch all those updates as a single write
 operation to the cache device. We prevent multiple metadata write
 operations within the same metadata block by holding a flag on each
-metadata block indicating that the block is pending or in the process
-of being written.
+metadata block indicating that the block is on the work queue pending
+to be written. Before we add another write operation to the work queue
+we check this flag and if it's set we simply update the metadata in
+memory without issuing another I/O for that metadata block.

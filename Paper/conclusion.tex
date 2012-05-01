@@ -5,6 +5,23 @@ In this paper, we created and implemented a basic mechanism within
 DM-Cache to persist metadata to the cache device and allow for
 recovery in the case of system failure. Our experimental results show
 the overhead cost of this mechanism is outweighed by its usefulness in
-cache recovery. Our scheme helps alleviate network traffic by
+cache recovery and allows you to continue work from a warm cache in
+the case of failure. Our scheme helps alleviate network traffic by
 recovering recently used blocks and also reduces system latency when
-bringing a system node back online.
+bringing a system node back online. It also has the added benefit of
+reducing the amount of time it takes to destroy the cache as in the
+original implementation of DM-Cache this is when metadata gets dumped
+to the disk, but in our implementation metadata has already been
+written to disk by this time so this step is unnecessary.
+
+Our naive implementation is shown to cause throughput reductions of as
+much as 50\% when starting with a cold cache and 25\% once the cache
+has been warmed. These large reductions are mostly due to the internal
+handling of writes on the SSD we used for testing and preliminary
+testing on other SSD's shows a much lower reduction in throughput due
+to higher internal write parallelism.
+
+Another aspect we introduce in this paper is the concept of batching
+metadata updates to perform less write operations to the disk. We show
+that we can batch between 87-88\% of all metadata updates which lowers
+the cost of keeping the cache and its metadata consistent.

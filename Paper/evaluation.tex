@@ -63,6 +63,12 @@ in the cache.
   \label{fig:iozone-warm}
 \end{figure}
 
+\begin{figure}[t]
+  \caption{IOZone Write Workload}
+  \centering \includegraphics[width=0.5\textwidth]{results_write.png}
+  \label{fig:iozone-write}
+\end{figure}
+
 In Figure \ref{fig:iozone-cold} it can be seen that inserting a lot of
 blocks into the cache along with our metadata persistence mechanism
 causing extra writes can slow down performance by about 50\%. This is
@@ -71,8 +77,49 @@ fetched is not cached so it has to be written to the cache device
 along with relevant metadata for each block. Figure
 \ref{fig:iozone-warm} shows that once the cache has reached a state
 where access is mostly read hits performance comes closer to a cache
-without persistence by about 75\%.
+without persistence by about 75\%. The majority of the performance hit
+comes from the use of synchronous I/O to ensure that metadata is
+written correctly to the disk and that it is always consistent with
+the data that is cached on the device. The rest of the performance
+loss is due to the slow write efficiency of SSD's in general but in
+this case it's also due to the SSD itself. Mtron SSD's are known to
+have some of the slowest write times compared to other SSD's
+\cite{FIOS}.
 
-\subsection{Metadata Batching}
+To evaluate the computational overhead of the extra code added to
+DM-Cache we ran the IOZone write workload on a write-through
+cache. The results are shown in Figure~\ref{fig:iozone-write}. These
+numbers are the average over three runs of IOZone with the cache being
+destroyed and recreated after every run to ensure that no cached data
+is being held in memory. The additional code added to DM-Cache does
+not seem to affect performance when it comes to additional thinktime
+by DM-Cache.
 
-% evaluation of metadata batching stuff %
+\subsection{Metadata Batching Efficiency}
+
+To evaluate how effective our metadata batching technique we keep two
+counters, one for the total number of metadata write operations that
+would have happened without batching and another for the amount of
+operations that were able to be successfully merged into one batch.
+
+In Table~\ref{table:batching} we can see that a good percentage of the
+metadata writes can be batched together to improve the metadata update
+performance when many blocks are being updated at once. This gives us
+87-88\% less writes overall as we can simply issue one write that
+handles many metadata updates at once.
+
+\begin{table}[t]
+  \caption{Metadata Batching Statistics for IOZone Read Workload}
+  \centering
+  \resizebox{0.5\textwidth}{!} {
+    \begin{tabular}{ | l | l | l | }
+      \hline
+      Cache Size (MB) & Metadata Updates & Batched Metadata Updates \\ \hline
+      512 & 286,900 & 250,958 \\ \hline
+      1024 & 569,317 & 501,770 \\ \hline
+      2048 & 860,075 & 752,423 \\
+      \hline
+    \end{tabular}
+  }
+  \label{table:batching}
+\end{table}

@@ -3,24 +3,44 @@
 
 The argument for SSD's in enterprise solutions was proposed by Lee et
 al.\ where they were able to show that SSD's could improve the
-throughput of enterprise database
-applications~\cite{EnterpriseSSD}. DM-Cache was created for extending
-this functionality to network storage devices for throughput
-improvement of remote storage. Our work builds upon DM-Cache by
-providing a fault tolerant persistence layer to alleviate the costs of
-system failure once the system is brought back online.
+throughput of enterprise database applications
+\cite{EnterpriseSSD}. DM-Cache was created for extending this
+functionality to network storage devices for throughput improvement of
+remote storage. Our work builds upon DM-Cache by providing a fault
+tolerant persistence layer to alleviate the costs of system failure
+once the system is brought back online.
 
 Previous work has been done before on communication architectures to
 alleviate network bandwidth issues such as work by Al-Fares et al.\
-which involved using hierarchies of commodity
-switches~\cite{Network}. With this work we seek to eliminate or reduce
-the effect of failures on network storage by implementing mechanisms
-to recover those recently used blocks on the cache. This means that we
+which involved using hierarchies of commodity switches
+\cite{Network}. With this work we seek to eliminate or reduce the
+effect of failures on network storage by implementing mechanisms to
+recover those recently used blocks on the cache. This means that we
 can alleviate data requests across the network to retrieve the lost
 cached blocks.
 
 Error recovery in caching systems is not a new idea and has been shown
-to work effectively in cloud based systems such as
-RAMCloud~\cite{RAMCloud}. With this work we extend that idea by
-providing fault tolerance capabilities to block level caching
-mechanisms present in the Linux kernel.
+to work effectively in cloud based systems such as RAMCloud
+\cite{RAMCloud}. With this work we extend that idea by providing fault
+tolerance capabilities to block level caching mechanisms present in
+the Linux kernel.
+
+Work done by Saxena et al.\ on FlashTier is very similar to this work
+in that it provides cache consistency allowing the cached data to be
+used after a crash or failure \cite{flashtier}. Their work is mainly
+done in the hardware interaction between the SSD and the operating
+system allowing for a more powerful and efficient interface when it
+comes to caching solutions that use SSD's. Our work focuses more on an
+existing implementation that is in use and how to add functionality to
+that on the software end.
+
+Efficiently handling metadata on SSD's is difficult due to the
+obscurity of what happens in the underlying hardware, this is
+especially difficult for caching mechanisms where many improvements
+can be made. A lot of work has gone into finding more efficient ways
+of representing and handling metadata on disk such as work on the
+FD-Tree structure and the Flash B-Tree \cite{FlashB-Tree,
+  FD-Tree}. Our work only uses a naive implementation based on the
+hash table structure in DM-Cache used to represent the block mappings
+\cite{DM-Cache}. We do this for simplicity as it requires less changes
+to the current code and our work is more of a proof of concept.
